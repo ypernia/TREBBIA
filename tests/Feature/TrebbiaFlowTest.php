@@ -1,0 +1,199 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Business;
+use App\Models\BusinessSchedule;
+use App\Models\BusinessUser;
+use App\Models\Client;
+use App\Models\Professional;
+use App\Models\Resource;
+use App\Models\Service;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class TrebbiaFlowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_can_register_create_business_complete_onboarding_and_open_dashboard(): void
+    {
+        $this->post(route('register.store'), [
+            'name' => 'Laura Perez',
+            'email' => 'laura@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertRedirect(route('business.create'));
+
+        $this->post(route('business.store'), [
+            'name' => 'Trebbia Demo',
+            'industry' => 'Fisioterapia',
+            'email' => 'hola@demo.test',
+            'phone' => '3001234567',
+            'timezone' => 'America/Bogota',
+        ])->assertRedirect(route('onboarding.show', ['step' => 'negocio']));
+
+        $business = Business::first();
+
+        $this->assertNotNull($business);
+        $this->assertDatabaseHas('business_users', [
+            'business_id' => $business->id,
+            'role' => BusinessUser::ROLE_OWNER,
+        ]);
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'negocio'), [
+                'name' => 'Trebbia Demo',
+                'industry' => 'Fisioterapia',
+                'email' => 'hola@demo.test',
+                'phone' => '3001234567',
+            ])->assertRedirect(route('onboarding.show', ['step' => 'horarios']));
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'horarios'), [
+                'opens_at' => '08:00',
+                'closes_at' => '18:00',
+                'weekdays' => [1, 2, 3, 4, 5],
+            ])->assertRedirect(route('onboarding.show', ['step' => 'servicio']));
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'servicio'), [
+                'name' => 'Consulta inicial',
+                'duration_minutes' => 60,
+                'price' => 120000,
+                'description' => 'Primera valoracion.',
+            ])->assertRedirect(route('onboarding.show', ['step' => 'profesional']));
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'profesional'), [
+                'name' => 'Dra. Mora',
+                'title' => 'Fisioterapeuta',
+                'email' => 'mora@example.com',
+                'phone' => '3009876543',
+            ])->assertRedirect(route('onboarding.show', ['step' => 'finalizar']));
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'finalizar'))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('businesses', ['id' => $business->id, 'status' => 'active']);
+        $this->assertSame(1, Service::where('business_id', $business->id)->count());
+        $this->assertSame(1, Professional::where('business_id', $business->id)->count());
+
+        $this->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Inicio')
+            ->assertSee('Servicios activos');
+    }
+
+    public function test_authenticated_user_without_business_is_redirected_to_business_creation(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('business.create'));
+    }
+
+    public function test_core_records_are_created_inside_the_active_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)->withSession(['business_id' => $business->id]);
+
+        $this->post(route('servicios.store'), [
+            'name' => 'Terapia manual',
+            'duration_minutes' => 45,
+            'price' => 90000,
+            'is_active' => 1,
+        ])->assertRedirect(route('servicios.index'));
+
+        $this->post(route('clientes.store'), [
+            'name' => 'Ana Ruiz',
+            'email' => 'ana@example.com',
+            'phone' => '3001112233',
+        ])->assertRedirect(route('clientes.index'));
+
+        $this->post(route('profesionales.store'), [
+            'name' => 'Carlos Rios',
+            'title' => 'Terapeuta',
+            'branch_id' => $business->branches()->first()->id,
+            'is_active' => 1,
+        ])->assertRedirect(route('profesionales.index'));
+
+        $this->post(route('recursos.store'), [
+            'name' => 'Consultorio 1',
+            'type' => 'Sala',
+            'branch_id' => $business->branches()->first()->id,
+            'is_active' => 1,
+        ])->assertRedirect(route('recursos.index'));
+
+        $this->assertSame(1, Service::where('business_id', $business->id)->count());
+        $this->assertSame(1, Client::where('business_id', $business->id)->count());
+        $this->assertSame(1, Professional::where('business_id', $business->id)->count());
+        $this->assertSame(1, Resource::where('business_id', $business->id)->count());
+    }
+
+    public function test_user_cannot_edit_records_from_another_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [$otherUser, $otherBusiness] = $this->tenantUser('Other Clinic', 'other@example.com');
+        $service = $otherBusiness->services()->create([
+            'name' => 'Servicio privado',
+            'duration_minutes' => 60,
+            'price_cents' => 50000,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('servicios.edit', $service))
+            ->assertNotFound();
+
+        $this->actingAs($otherUser)
+            ->withSession(['business_id' => $otherBusiness->id])
+            ->get(route('servicios.edit', $service))
+            ->assertOk();
+    }
+
+    public function test_business_schedule_can_be_updated(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('schedules.update'), [
+                'schedule' => [
+                    1 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    2 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    3 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    4 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    5 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    6 => ['opens_at' => null, 'closes_at' => null, 'is_closed' => 1],
+                    7 => ['opens_at' => null, 'closes_at' => null, 'is_closed' => 1],
+                ],
+            ])->assertRedirect(route('schedules.edit'));
+
+        $this->assertSame(7, BusinessSchedule::where('business_id', $business->id)->count());
+        $this->assertDatabaseHas('business_schedules', [
+            'business_id' => $business->id,
+            'weekday' => 6,
+            'is_closed' => true,
+        ]);
+    }
+
+    private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
+    {
+        $user = User::factory()->create(['email' => $email]);
+
+        $this->actingAs($user)->post(route('business.store'), [
+            'name' => $businessName,
+            'industry' => 'Servicios',
+            'timezone' => 'America/Bogota',
+        ]);
+
+        return [$user, Business::where('name', $businessName)->firstOrFail()];
+    }
+}
