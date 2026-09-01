@@ -68,6 +68,46 @@ Luego:
 
 Hostinger indica que el directorio destino debe estar vacio para el primer despliegue. Si hay archivos previos en `public_html`, conviene respaldarlos y limpiarlos desde File Manager antes de conectar Git.
 
+## Flujo de trabajo en vivo
+
+Para trabajar con cambios visibles casi en tiempo real:
+
+1. Hostinger debe quedar conectado al repositorio `https://github.com/ypernia/TREBBIA.git`.
+2. La rama de despliegue debe ser `main`.
+3. Auto-deployment debe estar activo en hPanel.
+4. Cada cambio local se valida, se confirma con commit y se sube a GitHub.
+5. Hostinger despliega automaticamente el nuevo commit.
+
+Comandos CMD para cada tanda de cambios:
+
+```bat
+cd C:\xampp\htdocs\TREBBIA
+php artisan test
+vendor\bin\pint --test
+npm.cmd run build
+git status
+git add .
+git commit -m "Describe el cambio"
+git push
+```
+
+Despues del `git push`, revisar en Hostinger:
+
+- `Advanced` -> `Git`
+- Estado del deployment
+- Build output si algo falla
+
+Para produccion conviene trabajar en cambios pequenos. Si un cambio incluye migraciones de base de datos, despues del deploy hay que ejecutar en SSH:
+
+```bash
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Si el cambio solo modifica Blade, CSS o controladores sin migraciones, normalmente basta con el auto-deploy de Hostinger.
+
 ## Laravel en Hostinger
 
 Este repo incluye un `.htaccess` en la raiz que redirige las solicitudes hacia `public/`, siguiendo el patron recomendado por Hostinger para Laravel cuando el proyecto se despliega dentro de `public_html`.
