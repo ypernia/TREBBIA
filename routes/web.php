@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
@@ -39,6 +40,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/onboarding/{step?}', [OnboardingController::class, 'show'])->name('onboarding.show');
         Route::post('/onboarding/{step}', [OnboardingController::class, 'store'])->name('onboarding.store');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class)->except(['show']);

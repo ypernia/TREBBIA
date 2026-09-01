@@ -27,7 +27,7 @@
                     <h2 class="text-lg font-bold">Proximas citas</h2>
                     <p class="mt-1 text-sm text-[#64716d]">Aqui aparecera la agenda operativa cuando creemos citas.</p>
                 </div>
-                <a href="{{ route('modules.show', 'agenda') }}" class="trebbia-button trebbia-button-secondary">Ver agenda</a>
+                <a href="{{ route('agenda.index') }}" class="trebbia-button trebbia-button-secondary">Ver agenda</a>
             </div>
 
             @if ($upcomingAppointments->isEmpty())
@@ -40,7 +40,7 @@
                     @foreach ($upcomingAppointments as $appointment)
                         <div class="rounded-md border border-[#e1e6e0] p-4">
                             <p class="font-bold">{{ $appointment->starts_at->format('d/m/Y H:i') }}</p>
-                            <p class="text-sm text-[#64716d]">{{ ucfirst($appointment->status) }}</p>
+                            <p class="text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} · {{ ucfirst($appointment->status) }}</p>
                         </div>
                     @endforeach
                 </div>

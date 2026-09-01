@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Appointment;
 use App\Models\Business;
 use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
@@ -184,6 +185,80 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_user_can_create_appointment_for_active_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create(['name' => 'Ana Ruiz']);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('agenda.store'), [
+                'client_id' => $client->id,
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '09:00',
+                'status' => 'scheduled',
+            ])->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'client_id' => $client->id,
+            'professional_id' => $professional->id,
+            'service_id' => $service->id,
+            'status' => 'scheduled',
+        ]);
+    }
+
+    public function test_appointment_cannot_overlap_same_professional(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $business->appointments()->create([
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('agenda.create'))
+            ->post(route('agenda.store'), [
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '09:30',
+                'status' => 'scheduled',
+            ])->assertRedirect(route('agenda.create'))
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertSame(1, Appointment::where('business_id', $business->id)->count());
+    }
+
+    public function test_user_cannot_edit_appointment_from_another_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Other Agenda', 'agenda-owner@example.com');
+        $appointment = $otherBusiness->appointments()->create([
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.edit', $appointment))
+            ->assertNotFound();
+    }
+
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
     {
         $user = User::factory()->create(['email' => $email]);
@@ -195,5 +270,13 @@ class TrebbiaFlowTest extends TestCase
         ]);
 
         return [$user, Business::where('name', $businessName)->firstOrFail()];
+    }
+
+    private function openWeekday(Business $business, int $weekday): void
+    {
+        BusinessSchedule::updateOrCreate(
+            ['business_id' => $business->id, 'branch_id' => null, 'weekday' => $weekday],
+            ['opens_at' => '08:00', 'closes_at' => '18:00', 'is_closed' => false],
+        );
     }
 }

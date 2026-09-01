@@ -18,6 +18,7 @@ class DashboardController extends Controller
                 'services' => $business->services()->where('is_active', true)->count(),
             ],
             'upcomingAppointments' => $business->appointments()
+                ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())
                 ->orderBy('starts_at')
                 ->take(5)
