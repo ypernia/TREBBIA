@@ -28,7 +28,7 @@
             <section class="trebbia-card p-6">
                 <h2 class="text-xl font-bold">Selecciona tu cita</h2>
 
-                <form method="GET" action="{{ route('public-booking.show', $business->slug) }}" class="mt-5 grid gap-4 sm:grid-cols-2">
+                <form id="booking-search-form" method="GET" action="{{ route('public-booking.show', $business->slug) }}" class="mt-5 grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="trebbia-label" for="service_id">Servicio</label>
                         <select class="trebbia-input" id="service_id" name="service_id" required>
@@ -120,5 +120,32 @@
             </aside>
         </div>
     </main>
+    <script>
+        const professionalOptionsByService = @json($professionalOptionsByService);
+        const selectedProfessionalId = @json($selectedProfessional?->id);
+        const serviceSelect = document.getElementById('service_id');
+        const professionalSelect = document.getElementById('professional_id');
+
+        function syncProfessionals(preserveSelected = false) {
+            const professionals = professionalOptionsByService[serviceSelect.value] || [];
+            const currentValue = preserveSelected ? (professionalSelect.value || String(selectedProfessionalId || '')) : '';
+
+            professionalSelect.innerHTML = '<option value="">Seleccionar</option>';
+            professionals.forEach((professional) => {
+                const option = document.createElement('option');
+                option.value = professional.id;
+                option.textContent = professional.name;
+                option.selected = String(professional.id) === currentValue;
+                professionalSelect.appendChild(option);
+            });
+
+            professionalSelect.disabled = professionals.length === 0;
+        }
+
+        serviceSelect.addEventListener('change', () => {
+            syncProfessionals(false);
+        });
+        syncProfessionals(true);
+    </script>
 </body>
 </html>

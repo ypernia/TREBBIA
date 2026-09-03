@@ -29,9 +29,10 @@ class PublicBookingController extends Controller
         return view('public-booking.show', [
             'business' => $business,
             'settings' => $settings,
-            'services' => $business->services()->where('is_active', true)->orderBy('name')->get(),
+            'services' => $services = $business->services()->with('professionals')->where('is_active', true)->orderBy('name')->get(),
             'selectedService' => $selectedService,
             'professionals' => $professionals,
+            'professionalOptionsByService' => $this->professionalOptionsByService($business, $services),
             'selectedProfessional' => $selectedProfessional,
             'date' => $date,
             'availableSlots' => $selectedService && $selectedProfessional
@@ -123,6 +124,30 @@ class PublicBookingController extends Controller
             ->when($assignedIds->isNotEmpty(), fn ($query) => $query->whereIn('id', $assignedIds))
             ->orderBy('name')
             ->get();
+    }
+
+    private function professionalOptionsByService(Business $business, $services): array
+    {
+        $activeProfessionals = $business->professionals()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return $services
+            ->mapWithKeys(function (Service $service) use ($activeProfessionals): array {
+                $assignedProfessionals = $service->professionals
+                    ->where('is_active', true)
+                    ->sortBy('name')
+                    ->values()
+                    ->map(fn ($professional): array => ['id' => $professional->id, 'name' => $professional->name]);
+
+                $professionals = $assignedProfessionals->isNotEmpty()
+                    ? $assignedProfessionals
+                    : $activeProfessionals->map(fn ($professional): array => ['id' => $professional->id, 'name' => $professional->name]);
+
+                return [$service->id => $professionals->values()->all()];
+            })
+            ->all();
     }
 
     private function availableSlots(Business $business, Service $service, int $professionalId, CarbonImmutable $date)

@@ -853,6 +853,7 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Consulta publica')
             ->assertSee('Dra. Publica')
+            ->assertSee('professionalOptionsByService', false)
             ->assertSee('09:00');
 
         $this->post(route('public-booking.store', $business->slug), [
