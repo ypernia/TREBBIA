@@ -580,6 +580,83 @@ class TrebbiaFlowTest extends TestCase
             ])->assertNotFound();
     }
 
+    public function test_reports_show_operational_metrics_for_selected_range(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create(['name' => 'Ana Ruiz']);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 12000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-10 09:00:00',
+            'ends_at' => '2026-09-10 10:00:00',
+            'status' => 'completed',
+        ]);
+        $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-11 09:00:00',
+            'ends_at' => '2026-09-11 10:00:00',
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('reports.index', [
+                'start_date' => '2026-09-01',
+                'end_date' => '2026-09-30',
+            ]))
+            ->assertOk()
+            ->assertSee('Reportes')
+            ->assertSee('Ingresos estimados')
+            ->assertSee('$120.000')
+            ->assertSee('Consulta')
+            ->assertSee('Dra. Mora')
+            ->assertSee('Completadas')
+            ->assertSee('Canceladas');
+    }
+
+    public function test_reports_only_include_active_business_data(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Other Reports', 'reports-owner@example.com');
+        $service = $business->services()->create(['name' => 'Consulta propia', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Propia', 'is_active' => true]);
+        $otherService = $otherBusiness->services()->create(['name' => 'Servicio ajeno', 'duration_minutes' => 60, 'price_cents' => 90000, 'is_active' => true]);
+        $otherProfessional = $otherBusiness->professionals()->create(['name' => 'Dr. Ajeno', 'is_active' => true]);
+
+        $business->appointments()->create([
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-10 09:00:00',
+            'ends_at' => '2026-09-10 10:00:00',
+            'status' => 'completed',
+        ]);
+        $otherBusiness->appointments()->create([
+            'service_id' => $otherService->id,
+            'professional_id' => $otherProfessional->id,
+            'starts_at' => '2026-09-10 09:00:00',
+            'ends_at' => '2026-09-10 10:00:00',
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('reports.index', [
+                'start_date' => '2026-09-01',
+                'end_date' => '2026-09-30',
+            ]))
+            ->assertOk()
+            ->assertSee('Consulta propia')
+            ->assertSee('Dra. Propia')
+            ->assertDontSee('Servicio ajeno')
+            ->assertDontSee('Dr. Ajeno');
+    }
+
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
     {
         $user = User::factory()->create(['email' => $email]);

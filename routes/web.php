@@ -11,6 +11,7 @@ use App\Http\Controllers\NewPasswordController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetLinkController;
 use App\Http\Controllers\ProfessionalController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceController;
@@ -54,6 +55,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/agenda/{appointment}/recordatorios', [AutomationController::class, 'scheduleReminder'])->name('automations.reminders.schedule');
         Route::patch('/recordatorios/{reminder}/enviado', [AutomationController::class, 'markReminderSent'])->name('automations.reminders.sent');
         Route::patch('/recordatorios/{reminder}/omitido', [AutomationController::class, 'skipReminder'])->name('automations.reminders.skip');
+        Route::get('/modulos/reportes', ReportController::class)->name('reports.index');
         Route::get('/modulos/{module}', ModuleController::class)->name('modules.show');
     });
 });
