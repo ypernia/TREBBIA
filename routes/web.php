@@ -18,6 +18,7 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -60,6 +61,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/configuracion/preferencias', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
         Route::post('/configuracion/sedes', [SettingsController::class, 'storeBranch'])->name('settings.branches.store');
         Route::put('/configuracion/sedes/{branch}', [SettingsController::class, 'updateBranch'])->name('settings.branches.update');
+        Route::post('/configuracion/equipo/invitaciones', [TeamController::class, 'invite'])->name('team.invitations.store');
+        Route::patch('/configuracion/equipo/miembros/{member}', [TeamController::class, 'updateMember'])->name('team.members.update');
+        Route::patch('/configuracion/equipo/invitaciones/{invitation}/cancelar', [TeamController::class, 'cancelInvitation'])->name('team.invitations.cancel');
         Route::get('/configuracion/horarios', [ScheduleController::class, 'edit'])->name('schedules.edit');
         Route::put('/configuracion/horarios', [ScheduleController::class, 'update'])->name('schedules.update');
         Route::get('/modulos/automatizaciones', [AutomationController::class, 'index'])->name('automations.index');

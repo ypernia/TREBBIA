@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
 use App\Models\Business;
+use App\Models\BusinessInvitation;
 use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
 use App\Models\Client;
@@ -395,6 +396,113 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('Sedes')
             ->assertSee('Usuarios y roles')
             ->assertSee($user->email);
+    }
+
+    public function test_team_invitation_creates_pending_invitation_for_new_email(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('team.invitations.store'), [
+                'name' => 'Recepcion Demo',
+                'email' => 'recepcion@example.com',
+                'role' => BusinessUser::ROLE_RECEPTIONIST,
+                'professional_id' => $professional->id,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->assertDatabaseHas('business_invitations', [
+            'business_id' => $business->id,
+            'email' => 'recepcion@example.com',
+            'role' => BusinessUser::ROLE_RECEPTIONIST,
+            'status' => BusinessInvitation::STATUS_PENDING,
+        ]);
+    }
+
+    public function test_existing_user_can_be_added_to_business_and_linked_to_professional(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $existingUser = User::factory()->create(['email' => 'pro@example.com']);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('team.invitations.store'), [
+                'email' => $existingUser->email,
+                'role' => BusinessUser::ROLE_PROFESSIONAL,
+                'professional_id' => $professional->id,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->assertDatabaseHas('business_users', [
+            'business_id' => $business->id,
+            'user_id' => $existingUser->id,
+            'role' => BusinessUser::ROLE_PROFESSIONAL,
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('professionals', [
+            'id' => $professional->id,
+            'user_id' => $existingUser->id,
+        ]);
+    }
+
+    public function test_team_member_role_and_status_can_be_updated(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $memberUser = User::factory()->create(['email' => 'admin@example.com']);
+        $member = BusinessUser::create([
+            'business_id' => $business->id,
+            'user_id' => $memberUser->id,
+            'role' => BusinessUser::ROLE_RECEPTIONIST,
+            'permissions' => BusinessUser::ROLE_PERMISSIONS[BusinessUser::ROLE_RECEPTIONIST],
+            'is_active' => true,
+            'joined_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('team.members.update', $member), [
+                'role' => BusinessUser::ROLE_ADMIN,
+                'is_active' => 0,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->assertDatabaseHas('business_users', [
+            'id' => $member->id,
+            'role' => BusinessUser::ROLE_ADMIN,
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_team_invitation_respects_user_limit(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $plan = Plan::create([
+            'name' => 'Limitado',
+            'code' => 'limited',
+            'monthly_price_cents' => 0,
+            'limits' => ['users' => 1],
+            'features' => [],
+            'is_active' => true,
+        ]);
+        $business->subscription()->create([
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'current_period_ends_at' => now()->addMonth(),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('settings.index'))
+            ->post(route('team.invitations.store'), [
+                'email' => 'blocked@example.com',
+                'role' => BusinessUser::ROLE_ADMIN,
+            ])->assertRedirect(route('settings.index'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('business_invitations', [
+            'business_id' => $business->id,
+            'email' => 'blocked@example.com',
+        ]);
     }
 
     public function test_appointment_respects_configured_slot_interval(): void

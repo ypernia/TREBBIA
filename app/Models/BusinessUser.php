@@ -48,4 +48,10 @@ class BusinessUser extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function professional()
+    {
+        return $this->hasOne(Professional::class, 'user_id', 'user_id')
+            ->whereColumn('professionals.business_id', 'business_users.business_id');
+    }
 }

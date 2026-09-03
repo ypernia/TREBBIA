@@ -172,6 +172,103 @@
                     <button class="trebbia-button">Crear sede</button>
                 </form>
             </section>
+
+            <section class="trebbia-card overflow-hidden">
+                <div class="border-b border-[#e7ebe7] p-6">
+                    <h2 class="text-xl font-bold">Equipo interno</h2>
+                    <p class="mt-1 text-sm text-[#64716d]">Invita usuarios, asigna roles y vincula profesionales del negocio.</p>
+                </div>
+
+                <form method="POST" action="{{ route('team.invitations.store') }}" class="grid gap-3 border-b border-[#e7ebe7] bg-[#f8faf8] p-5 lg:grid-cols-[1fr_1fr_10rem_1fr_auto] lg:items-end">
+                    @csrf
+                    <div>
+                        <label class="trebbia-label" for="invite_name">Nombre</label>
+                        <input class="trebbia-input" id="invite_name" name="name" placeholder="Nombre del usuario">
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="invite_email">Correo</label>
+                        <input class="trebbia-input" id="invite_email" type="email" name="email" required>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="invite_role">Rol</label>
+                        <select class="trebbia-input" id="invite_role" name="role" required>
+                            @foreach ($roles as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="invite_professional_id">Profesional</label>
+                        <select class="trebbia-input" id="invite_professional_id" name="professional_id">
+                            <option value="">Sin vincular</option>
+                            @foreach ($professionals as $professional)
+                                <option value="{{ $professional->id }}">{{ $professional->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button class="trebbia-button">Invitar</button>
+                </form>
+
+                @foreach ($users as $businessUser)
+                    @php $linkedProfessional = $professionals->firstWhere('user_id', $businessUser->user_id); @endphp
+                    <form method="POST" action="{{ route('team.members.update', $businessUser) }}" class="grid gap-3 border-b border-[#e7ebe7] p-5 lg:grid-cols-[1fr_10rem_1fr_7rem_auto] lg:items-end">
+                        @csrf
+                        @method('PATCH')
+                        <div>
+                            <p class="font-bold">{{ $businessUser->user->name }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $businessUser->user->email }}</p>
+                        </div>
+                        <div>
+                            <label class="trebbia-label" for="member_{{ $businessUser->id }}_role">Rol</label>
+                            <select class="trebbia-input" id="member_{{ $businessUser->id }}_role" name="role" @disabled($businessUser->role === 'owner')>
+                                @foreach ($roles as $value => $label)
+                                    <option value="{{ $value }}" @selected($businessUser->role === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @if ($businessUser->role === 'owner')
+                                <input type="hidden" name="role" value="owner">
+                            @endif
+                        </div>
+                        <div>
+                            <label class="trebbia-label" for="member_{{ $businessUser->id }}_professional_id">Profesional</label>
+                            <select class="trebbia-input" id="member_{{ $businessUser->id }}_professional_id" name="professional_id">
+                                <option value="">Sin vincular</option>
+                                @foreach ($professionals as $professional)
+                                    <option value="{{ $professional->id }}" @selected($linkedProfessional?->id === $professional->id)>{{ $professional->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <label class="flex items-center gap-2 pb-3 text-sm font-semibold text-[#53615d]">
+                            <input type="hidden" name="is_active" value="0">
+                            <input type="checkbox" name="is_active" value="1" @checked($businessUser->is_active) @disabled($businessUser->role === 'owner')>
+                            Activo
+                        </label>
+                        <button class="trebbia-button trebbia-button-secondary">Actualizar</button>
+                    </form>
+                @endforeach
+
+                @if ($invitations->isNotEmpty())
+                    <div class="border-b border-[#e7ebe7] p-5">
+                        <h3 class="font-bold">Invitaciones pendientes</h3>
+                        <div class="mt-3 space-y-3">
+                            @foreach ($invitations as $invitation)
+                                <div class="grid gap-3 rounded-md border border-[#e1e6e0] bg-white p-4 md:grid-cols-[1fr_10rem_auto] md:items-center">
+                                    <div>
+                                        <p class="font-bold">{{ $invitation->name ?: $invitation->email }}</p>
+                                        <p class="mt-1 text-sm text-[#64716d]">{{ $invitation->email }}</p>
+                                    </div>
+                                    <span class="w-fit rounded-md bg-[#fff9eb] px-2 py-1 text-xs font-bold text-[#765214]">{{ $roles[$invitation->role] ?? $invitation->role }}</span>
+                                    <form method="POST" action="{{ route('team.invitations.cancel', $invitation) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button class="rounded-md border border-[#f0c9c4] px-3 py-2 text-sm font-bold text-[#8a3027]">Cancelar</button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </section>
         </main>
 
         <aside class="space-y-6">
@@ -198,7 +295,11 @@
             <section class="trebbia-card overflow-hidden">
                 <div class="border-b border-[#e7ebe7] p-5">
                     <h2 class="text-lg font-bold">Usuarios y roles</h2>
-                    <p class="mt-1 text-sm text-[#64716d]">Base preparada para invitaciones y permisos detallados.</p>
+                    <p class="mt-1 text-sm text-[#64716d]">Cupos activos y permisos base por rol.</p>
+                </div>
+                <div class="border-b border-[#e7ebe7] p-5">
+                    <p class="text-sm font-bold text-[#18211f]">Cupos del plan</p>
+                    <p class="mt-1 text-sm text-[#64716d]">{{ $users->where('is_active', true)->count() }} / {{ $userLimit ?: 'ilimitado' }} usuarios activos</p>
                 </div>
                 @foreach ($users as $businessUser)
                     <div class="border-b border-[#e7ebe7] p-5">
