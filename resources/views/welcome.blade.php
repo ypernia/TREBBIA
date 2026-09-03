@@ -6,11 +6,12 @@
     <div class="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
         <section class="flex items-center px-6 py-10 sm:px-10 lg:px-16">
             <div class="max-w-2xl">
+                <x-trebbia-logo class="mb-8 w-64 sm:w-80" />
                 <div class="mb-8 inline-flex items-center gap-3 rounded-md border border-[#dce5df] bg-white px-3 py-2 text-sm font-semibold text-[#245f57]">
                     <span class="h-2 w-2 rounded-full bg-[#2f7d6d]"></span>
                     Base SaaS multiempresa para reservas online
                 </div>
-                <h1 class="text-4xl font-bold leading-tight text-[#18211f] sm:text-5xl">TREBBIA</h1>
+                <h1 class="text-4xl font-bold leading-tight text-[#18211f] sm:text-5xl">Centro inteligente de reservas y agendamiento</h1>
                 <p class="mt-5 max-w-xl text-lg leading-8 text-[#53615d]">
                     Organiza agendas, clientes, servicios y profesionales desde una plataforma sobria, segura y preparada para crecer por empresa.
                 </p>

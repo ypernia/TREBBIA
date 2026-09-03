@@ -11,7 +11,9 @@
         <div class="mx-auto max-w-4xl">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <a href="{{ route('dashboard') }}" class="text-2xl font-bold">TREBBIA</a>
+                    <a href="{{ route('dashboard') }}" class="block">
+                        <x-trebbia-logo class="w-52" />
+                    </a>
                     <p class="mt-1 text-sm text-[#64716d]">{{ $business->name }}</p>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">

@@ -4,7 +4,11 @@
 
 @section('content')
     <div class="flex min-h-screen items-center justify-center px-5 py-10">
-        <div class="trebbia-card w-full max-w-md p-6">
+        <div class="w-full max-w-md">
+            <a href="{{ route('home') }}" class="mb-6 block">
+                <x-trebbia-logo class="w-56" />
+            </a>
+        <div class="trebbia-card p-6">
             <h1 class="text-2xl font-bold">Recuperar contrasena</h1>
             <p class="mt-2 text-sm text-[#64716d]">Te enviaremos un enlace si el correo existe.</p>
             @if (session('status'))
@@ -19,6 +23,7 @@
                 </div>
                 <button class="trebbia-button w-full">Enviar enlace</button>
             </form>
+        </div>
         </div>
     </div>
 @endsection

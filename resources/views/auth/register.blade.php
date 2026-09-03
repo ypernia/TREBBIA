@@ -5,7 +5,9 @@
 @section('content')
     <div class="flex min-h-screen items-center justify-center px-5 py-10">
         <div class="w-full max-w-md">
-            <a href="{{ route('home') }}" class="text-2xl font-bold">TREBBIA</a>
+            <a href="{{ route('home') }}" class="block">
+                <x-trebbia-logo class="w-56" />
+            </a>
             <div class="trebbia-card mt-6 p-6">
                 <h1 class="text-2xl font-bold">Crear cuenta</h1>
                 <p class="mt-2 text-sm text-[#64716d]">Empieza con tu usuario y luego crearemos tu empresa.</p>

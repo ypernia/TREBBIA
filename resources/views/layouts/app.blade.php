@@ -25,7 +25,7 @@
         <aside class="border-b border-[#e1e6e0] bg-white lg:min-h-screen lg:border-b-0 lg:border-r">
             <div class="flex items-center justify-between px-5 py-5 lg:block">
                 <a href="{{ route('dashboard') }}" class="block">
-                    <span class="text-xl font-bold">TREBBIA</span>
+                    <x-trebbia-logo class="w-44 sm:w-48" />
                     <span class="mt-1 hidden text-sm text-[#64716d] lg:block">{{ $activeBusiness->name ?? 'Workspace' }}</span>
                 </a>
                 <form method="POST" action="{{ route('logout') }}" class="lg:hidden">
