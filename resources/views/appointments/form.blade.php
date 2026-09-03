@@ -80,6 +80,13 @@
                         <option value="{{ $professional->id }}" @selected((string) $selectedProfessional === (string) $professional->id)>{{ $professional->name }}</option>
                     @endforeach
                 </select>
+                @if ($professionals->isNotEmpty())
+                    <p class="mt-2 text-xs text-[#64716d]">
+                        @foreach ($professionals as $professional)
+                            {{ $professional->name }}: {{ $professional->services->isNotEmpty() ? $professional->services->pluck('name')->join(', ') : 'todos sin asignacion especifica' }}@if (! $loop->last) | @endif
+                        @endforeach
+                    </p>
+                @endif
             </div>
             <div>
                 <label class="trebbia-label" for="resource_id">Recurso</label>

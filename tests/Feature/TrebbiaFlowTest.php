@@ -8,6 +8,7 @@ use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
 use App\Models\Client;
 use App\Models\Professional;
+use App\Models\ProfessionalSchedule;
 use App\Models\Resource;
 use App\Models\Service;
 use App\Models\User;
@@ -315,6 +316,101 @@ class TrebbiaFlowTest extends TestCase
             ->assertSessionHasErrors('starts_at');
 
         $this->assertSame(1, Appointment::where('business_id', $business->id)->count());
+    }
+
+    public function test_professional_services_and_schedule_can_be_configured(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('profesionales.store'), [
+                'name' => 'Dra. Mora',
+                'title' => 'Fisioterapeuta',
+                'is_active' => 1,
+                'service_ids' => [$service->id],
+                'schedule' => [
+                    1 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    2 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    3 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    4 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    5 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    6 => ['starts_at' => '09:00', 'ends_at' => '12:00', 'is_closed' => 1],
+                    7 => ['starts_at' => '09:00', 'ends_at' => '12:00', 'is_closed' => 1],
+                ],
+            ])->assertRedirect(route('profesionales.index'));
+
+        $professional = Professional::where('business_id', $business->id)->where('name', 'Dra. Mora')->firstOrFail();
+
+        $this->assertDatabaseHas('professional_service', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'service_id' => $service->id,
+        ]);
+        $this->assertDatabaseHas('professional_schedules', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'weekday' => 1,
+            'starts_at' => '09:00',
+            'ends_at' => '17:00',
+            'is_closed' => false,
+        ]);
+    }
+
+    public function test_appointment_requires_professional_service_match_when_service_has_assignments(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $otherProfessional = $business->professionals()->create(['name' => 'Carlos Rios', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('agenda.create'))
+            ->post(route('agenda.store'), [
+                'service_id' => $service->id,
+                'professional_id' => $otherProfessional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '09:00',
+                'status' => 'scheduled',
+            ])->assertRedirect(route('agenda.create'))
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertSame(0, Appointment::where('business_id', $business->id)->count());
+    }
+
+    public function test_appointment_respects_professional_schedule(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+        ProfessionalSchedule::create([
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'weekday' => 1,
+            'starts_at' => '10:00',
+            'ends_at' => '12:00',
+            'is_closed' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('agenda.create'))
+            ->post(route('agenda.store'), [
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '09:00',
+                'status' => 'scheduled',
+            ])->assertRedirect(route('agenda.create'))
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertSame(0, Appointment::where('business_id', $business->id)->count());
     }
 
     public function test_user_cannot_edit_appointment_from_another_business(): void

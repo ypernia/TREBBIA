@@ -14,18 +14,24 @@ class ServiceController extends Controller
 
         return view('services.index', [
             'business' => $business,
-            'services' => $business->services()->latest()->paginate(10),
+            'services' => $business->services()->withCount('professionals')->latest()->paginate(10),
         ]);
     }
 
     public function create()
     {
-        return view('services.form', ['service' => new Service, 'business' => app('activeBusiness')]);
+        return view('services.form', [
+            'service' => new Service,
+            'business' => app('activeBusiness'),
+            'professionals' => app('activeBusiness')->professionals()->where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        app('activeBusiness')->services()->create($this->validated($request));
+        $attributes = $this->validated($request);
+        $service = app('activeBusiness')->services()->create($attributes['service']);
+        $this->syncProfessionals($service, $attributes['professional_ids']);
 
         return redirect()->route('servicios.index')->with('status', 'Servicio creado.');
     }
@@ -34,13 +40,19 @@ class ServiceController extends Controller
     {
         $this->authorizeTenant($servicio);
 
-        return view('services.form', ['service' => $servicio, 'business' => app('activeBusiness')]);
+        return view('services.form', [
+            'service' => $servicio,
+            'business' => app('activeBusiness'),
+            'professionals' => app('activeBusiness')->professionals()->where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
     public function update(Request $request, Service $servicio)
     {
         $this->authorizeTenant($servicio);
-        $servicio->update($this->validated($request));
+        $attributes = $this->validated($request);
+        $servicio->update($attributes['service']);
+        $this->syncProfessionals($servicio, $attributes['professional_ids']);
 
         return redirect()->route('servicios.index')->with('status', 'Servicio actualizado.');
     }
@@ -66,19 +78,29 @@ class ServiceController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:800'],
             'is_active' => ['nullable', 'boolean'],
+            'professional_ids' => ['nullable', 'array'],
+            'professional_ids.*' => [Rule::exists('professionals', 'id')->where('business_id', app('activeBusiness')->id)],
         ]);
 
         return [
-            'name' => $attributes['name'],
-            'duration_minutes' => $attributes['duration_minutes'],
-            'price_cents' => (int) round(($attributes['price'] ?? 0) * 100),
-            'description' => $attributes['description'] ?? null,
-            'is_active' => $request->boolean('is_active'),
+            'service' => [
+                'name' => $attributes['name'],
+                'duration_minutes' => $attributes['duration_minutes'],
+                'price_cents' => (int) round(($attributes['price'] ?? 0) * 100),
+                'description' => $attributes['description'] ?? null,
+                'is_active' => $request->boolean('is_active'),
+            ],
+            'professional_ids' => collect($attributes['professional_ids'] ?? [])->map(fn ($id) => (int) $id)->all(),
         ];
     }
 
     private function authorizeTenant(Service $service): void
     {
         abort_unless($service->business_id === app('activeBusiness')->id, 404);
+    }
+
+    private function syncProfessionals(Service $service, array $professionalIds): void
+    {
+        $service->professionals()->syncWithPivotValues($professionalIds, ['business_id' => app('activeBusiness')->id]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Business;
+use App\Models\Professional;
 use App\Models\Resource;
 use App\Models\Service;
 use Carbon\CarbonInterface;
@@ -26,6 +27,14 @@ class AppointmentAvailabilityService
             $errors[] = 'La cita queda fuera del horario general del negocio.';
         }
 
+        if ($professionalId && ! $this->professionalOffersService($business, $service, $professionalId)) {
+            $errors[] = 'El profesional seleccionado no presta este servicio.';
+        }
+
+        if ($professionalId && ! $this->isInsideProfessionalSchedule($business, $professionalId, $startsAt, $endsAt)) {
+            $errors[] = 'La cita queda fuera del horario del profesional.';
+        }
+
         if ($professionalId && $this->overlaps($business, $startsAt, $endsAt, 'professional_id', $professionalId, $ignoreAppointmentId)) {
             $errors[] = 'El profesional ya tiene una cita en ese horario.';
         }
@@ -42,6 +51,48 @@ class AppointmentAvailabilityService
     {
         return ($professionalId && $this->overlaps($business, $startsAt, $endsAt, 'professional_id', $professionalId, $ignoreAppointmentId))
             || ($resourceId && $this->overlaps($business, $startsAt, $endsAt, 'resource_id', $resourceId, $ignoreAppointmentId));
+    }
+
+    private function professionalOffersService(Business $business, Service $service, int $professionalId): bool
+    {
+        $professional = Professional::query()
+            ->where('business_id', $business->id)
+            ->whereKey($professionalId)
+            ->first();
+
+        if (! $professional) {
+            return false;
+        }
+
+        if (! $service->professionals()->exists()) {
+            return true;
+        }
+
+        return $service->professionals()
+            ->where('professionals.id', $professionalId)
+            ->exists();
+    }
+
+    private function isInsideProfessionalSchedule(Business $business, int $professionalId, CarbonInterface $startsAt, CarbonInterface $endsAt): bool
+    {
+        $schedule = Professional::query()
+            ->where('business_id', $business->id)
+            ->whereKey($professionalId)
+            ->first()
+            ?->schedules()
+            ->where('weekday', $startsAt->dayOfWeekIso)
+            ->first();
+
+        if (! $schedule) {
+            return true;
+        }
+
+        if ($schedule->is_closed || ! $schedule->starts_at || ! $schedule->ends_at) {
+            return false;
+        }
+
+        return $startsAt->format('H:i:s') >= $schedule->starts_at
+            && $endsAt->format('H:i:s') <= $schedule->ends_at;
     }
 
     private function isInsideBusinessSchedule(Business $business, CarbonInterface $startsAt, CarbonInterface $endsAt): bool

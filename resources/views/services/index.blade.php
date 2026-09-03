@@ -11,13 +11,14 @@
     </div>
     <div class="trebbia-card overflow-hidden">
         @forelse ($services as $service)
-            <div class="grid gap-3 border-b border-[#e7ebe7] p-5 md:grid-cols-[1fr_9rem_8rem_10rem] md:items-center">
+            <div class="grid gap-3 border-b border-[#e7ebe7] p-5 md:grid-cols-[1fr_9rem_8rem_10rem_10rem] md:items-center">
                 <div>
                     <p class="font-bold">{{ $service->name }}</p>
                     <p class="mt-1 text-sm text-[#64716d]">{{ $service->description ?: 'Sin descripcion' }}</p>
                 </div>
                 <p class="text-sm font-semibold">{{ $service->duration_minutes }} min</p>
                 <p class="text-sm font-semibold">${{ number_format($service->price_cents / 100, 0, ',', '.') }}</p>
+                <p class="text-sm text-[#64716d]">{{ $service->professionals_count }} profesional{{ $service->professionals_count === 1 ? '' : 'es' }}</p>
                 <div class="flex items-center gap-2 md:justify-end">
                     <span class="rounded-md px-2 py-1 text-xs font-bold {{ $service->is_active ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#64716d]' }}">{{ $service->is_active ? 'Activo' : 'Inactivo' }}</span>
                     <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('servicios.edit', $service) }}">Editar</a>

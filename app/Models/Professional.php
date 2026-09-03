@@ -35,4 +35,11 @@ class Professional extends Model
     {
         return $this->hasMany(ProfessionalSchedule::class);
     }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class)
+            ->withPivot('business_id')
+            ->withTimestamps();
+    }
 }

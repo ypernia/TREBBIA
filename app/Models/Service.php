@@ -20,4 +20,11 @@ class Service extends Model
     {
         return $this->belongsTo(Business::class);
     }
+
+    public function professionals()
+    {
+        return $this->belongsToMany(Professional::class)
+            ->withPivot('business_id')
+            ->withTimestamps();
+    }
 }

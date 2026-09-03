@@ -54,7 +54,7 @@ class AppointmentController extends Controller
                 ->orderBy('starts_at')
                 ->take(8)
                 ->get(),
-            'professionals' => $business->professionals()->where('is_active', true)->orderBy('name')->get(),
+            'professionals' => $business->professionals()->with('services')->where('is_active', true)->orderBy('name')->get(),
             'services' => $business->services()->where('is_active', true)->orderBy('name')->get(),
             'statuses' => $this->statuses(),
         ]);

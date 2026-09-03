@@ -28,6 +28,19 @@
                 <label class="trebbia-label" for="description">Descripcion</label>
                 <textarea class="trebbia-input" id="description" name="description" rows="4">{{ old('description', $service->description) }}</textarea>
             </div>
+            <div class="sm:col-span-2">
+                <p class="trebbia-label">Profesionales que prestan este servicio</p>
+                <div class="grid gap-2 rounded-md border border-[#d7ddd7] bg-white p-3 sm:grid-cols-2">
+                    @forelse ($professionals as $professional)
+                        <label class="flex items-center gap-2 text-sm font-semibold text-[#53615d]">
+                            <input type="checkbox" name="professional_ids[]" value="{{ $professional->id }}" @checked(in_array($professional->id, old('professional_ids', $service->exists ? $service->professionals->pluck('id')->all() : [])))>
+                            {{ $professional->name }}
+                        </label>
+                    @empty
+                        <p class="text-sm text-[#64716d]">Aun no tienes profesionales activos.</p>
+                    @endforelse
+                </div>
+            </div>
             <input type="hidden" name="is_active" value="0">
             <label class="flex items-center gap-2 text-sm font-semibold text-[#53615d] sm:col-span-2">
                 <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $service->exists ? $service->is_active : true))>
