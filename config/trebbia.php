@@ -17,6 +17,6 @@ return [
         'automatizaciones' => ['label' => 'Automatizaciones', 'status' => 'Funcional', 'route' => 'automations.index', 'summary' => 'Plantillas y recordatorios operativos para citas.'],
         'reportes' => ['label' => 'Reportes', 'status' => 'Funcional', 'route' => 'reports.index', 'summary' => 'Indicadores de citas, ingresos estimados, servicios, profesionales y clientes.'],
         'membresia' => ['label' => 'Membresia', 'status' => 'Proximamente', 'summary' => 'Planes, suscripciones y limites comerciales.'],
-        'configuracion' => ['label' => 'Configuracion', 'status' => 'Funcional', 'route' => 'schedules.edit', 'summary' => 'Preferencias del negocio, roles y parametros de agenda.'],
+        'configuracion' => ['label' => 'Configuracion', 'status' => 'Funcional', 'route' => 'settings.index', 'summary' => 'Perfil del negocio, sedes, usuarios base y parametros de agenda.'],
     ],
 ];

@@ -11,6 +11,7 @@
                 <h2 class="text-xl font-bold">Horarios del negocio</h2>
                 <p class="mt-2 max-w-2xl text-sm text-[#64716d]">Define la disponibilidad general. La agenda avanzada usara estos horarios junto con servicios, profesionales, recursos y bloqueos.</p>
             </div>
+            <a class="trebbia-button trebbia-button-secondary" href="{{ route('settings.index') }}">Volver a configuracion</a>
         </div>
         @include('partials.errors')
         <form method="POST" action="{{ route('schedules.update') }}" class="mt-6 space-y-3">

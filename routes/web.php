@@ -15,6 +15,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -47,6 +48,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class);
         Route::resource('recursos', ResourceController::class)->except(['show']);
+        Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
+        Route::put('/configuracion/negocio', [SettingsController::class, 'updateBusiness'])->name('settings.business.update');
+        Route::put('/configuracion/preferencias', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
+        Route::post('/configuracion/sedes', [SettingsController::class, 'storeBranch'])->name('settings.branches.store');
+        Route::put('/configuracion/sedes/{branch}', [SettingsController::class, 'updateBranch'])->name('settings.branches.update');
         Route::get('/configuracion/horarios', [ScheduleController::class, 'edit'])->name('schedules.edit');
         Route::put('/configuracion/horarios', [ScheduleController::class, 'update'])->name('schedules.update');
         Route::get('/modulos/automatizaciones', [AutomationController::class, 'index'])->name('automations.index');

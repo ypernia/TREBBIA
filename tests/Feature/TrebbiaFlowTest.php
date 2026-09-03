@@ -261,6 +261,102 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_business_settings_profile_preferences_and_branches_can_be_updated(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $branch = $business->branches()->firstOrFail();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('settings.business.update'), [
+                'name' => 'TREBBIA Centro',
+                'industry' => 'Salud',
+                'email' => 'hola@trebbia.test',
+                'phone' => '3001234567',
+                'timezone' => 'America/Bogota',
+                'currency' => 'USD',
+            ])->assertRedirect(route('settings.index'));
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('settings.preferences.update'), [
+                'slot_interval_minutes' => 15,
+                'booking_notice_minutes' => 240,
+                'allow_public_booking' => 1,
+                'require_manual_confirmation' => 1,
+                'notify_email' => 1,
+                'notify_whatsapp' => 0,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('settings.branches.store'), [
+                'name' => 'Sede norte',
+                'phone' => '3010000000',
+                'address' => 'Calle 10',
+                'is_main' => 1,
+                'is_active' => 1,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->assertDatabaseHas('businesses', [
+            'id' => $business->id,
+            'name' => 'TREBBIA Centro',
+            'currency' => 'USD',
+        ]);
+        $this->assertDatabaseHas('business_settings', [
+            'business_id' => $business->id,
+            'slot_interval_minutes' => 15,
+            'booking_notice_minutes' => 240,
+        ]);
+        $this->assertDatabaseHas('branches', [
+            'business_id' => $business->id,
+            'name' => 'Sede norte',
+            'is_main' => true,
+        ]);
+        $this->assertDatabaseHas('branches', [
+            'id' => $branch->id,
+            'is_main' => false,
+        ]);
+    }
+
+    public function test_settings_page_shows_users_and_business_summary(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('Perfil del negocio')
+            ->assertSee('Preferencias de agenda')
+            ->assertSee('Sedes')
+            ->assertSee('Usuarios y roles')
+            ->assertSee($user->email);
+    }
+
+    public function test_appointment_respects_configured_slot_interval(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update(['slot_interval_minutes' => 30, 'booking_notice_minutes' => 0]);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('agenda.create'))
+            ->post(route('agenda.store'), [
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '09:15',
+                'status' => 'scheduled',
+            ])->assertRedirect(route('agenda.create'))
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertSame(0, Appointment::where('business_id', $business->id)->count());
+    }
+
     public function test_user_can_create_appointment_for_active_business(): void
     {
         [$user, $business] = $this->tenantUser();

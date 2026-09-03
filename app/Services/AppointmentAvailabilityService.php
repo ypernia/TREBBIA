@@ -27,6 +27,15 @@ class AppointmentAvailabilityService
             $errors[] = 'La cita queda fuera del horario general del negocio.';
         }
 
+        $settings = $business->settings()->first();
+        if ($settings && ($startsAt->minute % $settings->slot_interval_minutes) !== 0) {
+            $errors[] = 'La hora inicial no coincide con el intervalo de agenda configurado.';
+        }
+
+        if ($settings && $settings->booking_notice_minutes > 0 && $startsAt->lessThan(now()->addMinutes($settings->booking_notice_minutes))) {
+            $errors[] = 'La cita no cumple el aviso minimo configurado para reservar.';
+        }
+
         if ($professionalId && ! $this->professionalOffersService($business, $service, $professionalId)) {
             $errors[] = 'El profesional seleccionado no presta este servicio.';
         }
