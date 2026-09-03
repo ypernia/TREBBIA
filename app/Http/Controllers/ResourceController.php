@@ -15,6 +15,8 @@ class ResourceController extends Controller
         return view('resources.index', [
             'business' => $business,
             'resources' => $business->resources()->with('branch')->latest()->paginate(10),
+            'branches' => $business->branches()->where('is_active', true)->orderBy('name')->get(),
+            'suggestedResources' => $this->suggestedResources(),
         ]);
     }
 
@@ -32,6 +34,44 @@ class ResourceController extends Controller
         app('activeBusiness')->resources()->create($this->validated($request));
 
         return redirect()->route('recursos.index')->with('status', 'Recurso creado.');
+    }
+
+    public function storeSuggestions(Request $request)
+    {
+        $business = app('activeBusiness');
+        $attributes = $request->validate([
+            'resources' => ['required', 'array', 'min:1'],
+            'resources.*.name' => ['required', 'string', 'max:140'],
+            'resources.*.type' => ['nullable', 'string', 'max:120'],
+            'resources.*.selected' => ['nullable', 'boolean'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id', function ($attribute, $value, $fail) use ($business): void {
+                if ($value && ! $business->branches()->whereKey($value)->exists()) {
+                    $fail('La sede seleccionada no pertenece a este negocio.');
+                }
+            }],
+        ]);
+
+        $created = 0;
+        foreach ($attributes['resources'] as $resource) {
+            if (! (bool) ($resource['selected'] ?? false)) {
+                continue;
+            }
+
+            $exists = $business->resources()->where('name', $resource['name'])->exists();
+            if ($exists) {
+                continue;
+            }
+
+            $business->resources()->create([
+                'branch_id' => $attributes['branch_id'] ?? null,
+                'name' => $resource['name'],
+                'type' => $resource['type'] ?? null,
+                'is_active' => true,
+            ]);
+            $created++;
+        }
+
+        return redirect()->route('recursos.index')->with('status', "{$created} recurso(s) creados.");
     }
 
     public function edit(Resource $recurso)
@@ -85,5 +125,16 @@ class ResourceController extends Controller
     private function authorizeTenant(Resource $resource): void
     {
         abort_unless($resource->business_id === app('activeBusiness')->id, 404);
+    }
+
+    private function suggestedResources(): array
+    {
+        $business = app('activeBusiness');
+        $industry = str($business->industry ?: '')->lower()->ascii()->toString();
+        $presets = config('trebbia.resource_presets');
+        $key = collect(array_keys($presets))
+            ->first(fn (string $presetKey): bool => $presetKey !== 'default' && str_contains($industry, $presetKey));
+
+        return $presets[$key] ?? $presets['default'];
     }
 }

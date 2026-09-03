@@ -161,6 +161,68 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk();
     }
 
+    public function test_resource_suggestions_match_business_industry_and_can_be_created_in_bulk(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->update(['industry' => 'Fisioterapia']);
+        $branch = $business->branches()->firstOrFail();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('recursos.index'))
+            ->assertOk()
+            ->assertSee('Consultorio fisioterapia 1')
+            ->assertSee('Camilla 1')
+            ->assertSee('Equipo de electroterapia');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('recursos.suggestions.store'), [
+                'branch_id' => $branch->id,
+                'resources' => [
+                    ['name' => 'Consultorio fisioterapia 1', 'type' => 'Consultorio', 'selected' => 1],
+                    ['name' => 'Camilla 1', 'type' => 'Equipo', 'selected' => 1],
+                    ['name' => 'Camilla 2', 'type' => 'Equipo', 'selected' => 0],
+                ],
+            ])->assertRedirect(route('recursos.index'));
+
+        $this->assertDatabaseHas('resources', [
+            'business_id' => $business->id,
+            'branch_id' => $branch->id,
+            'name' => 'Consultorio fisioterapia 1',
+            'type' => 'Consultorio',
+        ]);
+        $this->assertDatabaseHas('resources', [
+            'business_id' => $business->id,
+            'name' => 'Camilla 1',
+        ]);
+        $this->assertDatabaseMissing('resources', [
+            'business_id' => $business->id,
+            'name' => 'Camilla 2',
+        ]);
+    }
+
+    public function test_resource_suggestion_bulk_creation_skips_existing_names(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->resources()->create(['name' => 'Sala 1', 'type' => 'Sala', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('recursos.suggestions.store'), [
+                'resources' => [
+                    ['name' => 'Sala 1', 'type' => 'Sala', 'selected' => 1],
+                    ['name' => 'Consultorio 1', 'type' => 'Consultorio', 'selected' => 1],
+                ],
+            ])->assertRedirect(route('recursos.index'));
+
+        $this->assertSame(1, Resource::where('business_id', $business->id)->where('name', 'Sala 1')->count());
+        $this->assertDatabaseHas('resources', [
+            'business_id' => $business->id,
+            'name' => 'Consultorio 1',
+        ]);
+    }
+
     public function test_client_profile_shows_contact_status_and_appointment_history(): void
     {
         [$user, $business] = $this->tenantUser();

@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class);
+        Route::post('/recursos/sugeridos', [ResourceController::class, 'storeSuggestions'])->name('recursos.suggestions.store');
         Route::resource('recursos', ResourceController::class)->except(['show']);
         Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('/configuracion/negocio', [SettingsController::class, 'updateBusiness'])->name('settings.business.update');
