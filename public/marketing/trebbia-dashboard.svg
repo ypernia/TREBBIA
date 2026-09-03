@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980" fill="none">
+  <rect width="1440" height="980" fill="#FBFAF7"/>
+  <rect x="40" y="40" width="1360" height="900" rx="34" fill="#FFFFFF" stroke="#DFE8E5" stroke-width="2"/>
+  <rect x="40" y="40" width="1360" height="70" rx="34" fill="#F2F7F6"/>
+  <circle cx="88" cy="75" r="9" fill="#73D7CD"/>
+  <circle cx="118" cy="75" r="9" fill="#DCEFFA"/>
+  <circle cx="148" cy="75" r="9" fill="#245B63"/>
+  <rect x="80" y="150" width="210" height="730" rx="22" fill="#F7F5EF"/>
+  <text x="110" y="205" fill="#245B63" font-family="Arial, sans-serif" font-size="34" font-weight="700">trebbia</text>
+  <rect x="110" y="270" width="145" height="38" rx="12" fill="#E5F7F5"/>
+  <rect x="110" y="335" width="120" height="16" rx="8" fill="#66747E" opacity=".55"/>
+  <rect x="110" y="385" width="145" height="16" rx="8" fill="#66747E" opacity=".38"/>
+  <rect x="110" y="435" width="130" height="16" rx="8" fill="#66747E" opacity=".38"/>
+  <rect x="110" y="485" width="150" height="16" rx="8" fill="#66747E" opacity=".38"/>
+  <text x="350" y="205" fill="#1F2933" font-family="Arial, sans-serif" font-size="44" font-weight="700">Dashboard</text>
+  <text x="350" y="245" fill="#66747E" font-family="Arial, sans-serif" font-size="20">Resumen de reservas, clientes y equipo</text>
+  <rect x="350" y="300" width="235" height="150" rx="22" fill="#F2F7F6" stroke="#DFE8E5"/>
+  <rect x="620" y="300" width="235" height="150" rx="22" fill="#F2F7F6" stroke="#DFE8E5"/>
+  <rect x="890" y="300" width="235" height="150" rx="22" fill="#F2F7F6" stroke="#DFE8E5"/>
+  <rect x="1160" y="300" width="170" height="150" rx="22" fill="#245B63"/>
+  <text x="380" y="355" fill="#66747E" font-family="Arial, sans-serif" font-size="18">Citas hoy</text>
+  <text x="380" y="410" fill="#245B63" font-family="Arial, sans-serif" font-size="54" font-weight="700">18</text>
+  <text x="650" y="355" fill="#66747E" font-family="Arial, sans-serif" font-size="18">Clientes</text>
+  <text x="650" y="410" fill="#245B63" font-family="Arial, sans-serif" font-size="54" font-weight="700">246</text>
+  <text x="920" y="355" fill="#66747E" font-family="Arial, sans-serif" font-size="18">Profesionales</text>
+  <text x="920" y="410" fill="#245B63" font-family="Arial, sans-serif" font-size="54" font-weight="700">8</text>
+  <text x="1190" y="355" fill="#E5F7F5" font-family="Arial, sans-serif" font-size="18">Canales</text>
+  <text x="1190" y="410" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="54" font-weight="700">4</text>
+  <rect x="350" y="510" width="610" height="310" rx="24" fill="#FFFFFF" stroke="#DFE8E5" stroke-width="2"/>
+  <text x="390" y="565" fill="#1F2933" font-family="Arial, sans-serif" font-size="26" font-weight="700">Próximas reservas</text>
+  <g fill="#F2F7F6">
+    <rect x="390" y="610" width="530" height="54" rx="14"/>
+    <rect x="390" y="684" width="530" height="54" rx="14"/>
+    <rect x="390" y="758" width="530" height="54" rx="14"/>
+  </g>
+  <g fill="#245B63" font-family="Arial, sans-serif" font-size="18" font-weight="700">
+    <text x="415" y="644">08:00</text>
+    <text x="415" y="718">09:30</text>
+    <text x="415" y="792">14:00</text>
+  </g>
+  <g fill="#66747E" font-family="Arial, sans-serif" font-size="18">
+    <text x="510" y="644">Valoración inicial · WhatsApp</text>
+    <text x="510" y="718">Sesión reservada · Enlace público</text>
+    <text x="510" y="792">Cambio de horario · Recepción</text>
+  </g>
+  <rect x="1000" y="510" width="330" height="310" rx="24" fill="#F2F7F6" stroke="#DFE8E5" stroke-width="2"/>
+  <text x="1040" y="565" fill="#1F2933" font-family="Arial, sans-serif" font-size="26" font-weight="700">Ocupación</text>
+  <rect x="1040" y="715" width="38" height="70" rx="10" fill="#73D7CD"/>
+  <rect x="1100" y="650" width="38" height="135" rx="10" fill="#7CB7E8"/>
+  <rect x="1160" y="600" width="38" height="185" rx="10" fill="#245B63"/>
+  <rect x="1220" y="675" width="38" height="110" rx="10" fill="#73D7CD"/>
+</svg>
