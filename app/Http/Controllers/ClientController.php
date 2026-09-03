@@ -11,16 +11,22 @@ class ClientController extends Controller
     {
         $business = app('activeBusiness');
         $search = $request->string('q')->toString();
+        $status = $request->input('status', 'active');
 
         return view('clients.index', [
             'business' => $business,
             'search' => $search,
+            'status' => $status,
             'clients' => $business->clients()
                 ->when($search, fn ($query) => $query->where(function ($query) use ($search): void {
                     $query->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('document_number', 'like', "%{$search}%");
                 }))
+                ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+                ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
+                ->withCount('appointments')
                 ->latest()
                 ->paginate(10)
                 ->withQueryString(),
@@ -30,6 +36,33 @@ class ClientController extends Controller
     public function create()
     {
         return view('clients.form', ['client' => new Client, 'business' => app('activeBusiness')]);
+    }
+
+    public function show(Client $cliente)
+    {
+        $this->authorizeTenant($cliente);
+
+        $cliente->loadCount([
+            'appointments',
+            'appointments as completed_appointments_count' => fn ($query) => $query->where('status', 'completed'),
+            'appointments as pending_appointments_count' => fn ($query) => $query->whereIn('status', ['scheduled', 'confirmed']),
+        ]);
+
+        return view('clients.show', [
+            'business' => app('activeBusiness'),
+            'client' => $cliente,
+            'nextAppointment' => $cliente->appointments()
+                ->with(['professional', 'service'])
+                ->where('business_id', app('activeBusiness')->id)
+                ->where('starts_at', '>=', now())
+                ->orderBy('starts_at')
+                ->first(),
+            'appointments' => $cliente->appointments()
+                ->with(['professional', 'service', 'resource'])
+                ->where('business_id', app('activeBusiness')->id)
+                ->latest('starts_at')
+                ->paginate(8),
+        ]);
     }
 
     public function store(Request $request)
@@ -68,8 +101,10 @@ class ClientController extends Controller
             'name' => ['required', 'string', 'max:140'],
             'email' => ['nullable', 'email', 'max:180'],
             'phone' => ['nullable', 'string', 'max:60'],
+            'document_number' => ['nullable', 'string', 'max:80'],
             'birthdate' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1200'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
     }
 

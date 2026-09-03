@@ -43,7 +43,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
-        Route::resource('clientes', ClientController::class)->except(['show']);
+        Route::resource('clientes', ClientController::class);
         Route::resource('recursos', ResourceController::class)->except(['show']);
         Route::get('/configuracion/horarios', [ScheduleController::class, 'edit'])->name('schedules.edit');
         Route::put('/configuracion/horarios', [ScheduleController::class, 'update'])->name('schedules.update');

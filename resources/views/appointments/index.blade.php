@@ -90,6 +90,7 @@
                                         <p class="text-sm font-bold">{{ $appointment->starts_at->format('H:i') }} - {{ $appointment->ends_at->format('H:i') }}</p>
                                         <p class="mt-1 text-sm text-[#53615d]">{{ $appointment->service?->name ?: 'Servicio' }}</p>
                                         <p class="text-xs text-[#64716d]">{{ $appointment->professional?->name ?: 'Profesional' }}</p>
+                                        <p class="text-xs text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
                                     </a>
                                 @empty
                                     <p class="rounded-md border border-dashed border-[#cfd8d2] p-3 text-sm text-[#64716d]">Sin citas</p>
@@ -107,7 +108,14 @@
                         </div>
                         <div>
                             <p class="font-bold">{{ $appointment->service?->name ?: 'Servicio sin asignar' }}</p>
-                            <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} - {{ $appointment->professional?->name ?: 'Profesional sin asignar' }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">
+                                @if ($appointment->client)
+                                    <a class="font-semibold text-[#245f57] hover:underline" href="{{ route('clientes.show', $appointment->client) }}">{{ $appointment->client->name }}</a>
+                                @else
+                                    Cliente sin asignar
+                                @endif
+                                - {{ $appointment->professional?->name ?: 'Profesional sin asignar' }}
+                            </p>
                             @if ($appointment->resource)
                                 <p class="mt-1 text-sm text-[#64716d]">Recurso: {{ $appointment->resource->name }}</p>
                             @endif

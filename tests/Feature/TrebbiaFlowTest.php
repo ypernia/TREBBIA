@@ -159,6 +159,80 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk();
     }
 
+    public function test_client_profile_shows_contact_status_and_appointment_history(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create([
+            'name' => 'Ana Ruiz',
+            'email' => 'ana@example.com',
+            'phone' => '3001112233',
+            'document_number' => 'CC123',
+            'birthdate' => '1990-05-10',
+            'notes' => 'Prefiere citas en la manana.',
+            'is_active' => true,
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => now()->addDay()->setTime(9, 0),
+            'ends_at' => now()->addDay()->setTime(10, 0),
+            'status' => 'confirmed',
+            'notes' => 'Traer examenes.',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clientes.show', $client))
+            ->assertOk()
+            ->assertSee('Ficha')
+            ->assertSee('CC123')
+            ->assertSee('Prefiere citas en la manana.')
+            ->assertSee('Proxima cita')
+            ->assertSee('Historial de citas')
+            ->assertSee('Consulta')
+            ->assertSee('Dra. Mora')
+            ->assertSee('Confirmada');
+    }
+
+    public function test_clients_can_be_filtered_by_document_and_status(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $business->clients()->create([
+            'name' => 'Ana Ruiz',
+            'document_number' => 'CC123',
+            'is_active' => true,
+        ]);
+        $business->clients()->create([
+            'name' => 'Luis Pena',
+            'document_number' => 'CC999',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clientes.index', ['q' => 'CC999', 'status' => 'inactive']))
+            ->assertOk()
+            ->assertSee('Luis Pena')
+            ->assertDontSee('Ana Ruiz');
+    }
+
+    public function test_user_cannot_view_client_from_another_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Other CRM', 'crm-owner@example.com');
+        $client = $otherBusiness->clients()->create(['name' => 'Cliente Privado']);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clientes.show', $client))
+            ->assertNotFound();
+    }
+
     public function test_business_schedule_can_be_updated(): void
     {
         [$user, $business] = $this->tenantUser();
