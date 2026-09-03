@@ -51,23 +51,23 @@
         ];
 
         $productCards = [
-            ['title' => 'Visualiza tu día de forma clara.', 'copy' => 'Consulta citas, profesionales, horarios disponibles y próximos servicios desde una agenda central.', 'image' => 'marketing/trebbia-agenda.svg', 'alt' => 'Módulo Agenda de TREBBIA'],
-            ['title' => 'Toda la información de tus clientes.', 'copy' => 'Mantén datos, contacto e historial listos para cada atención.', 'image' => 'marketing/trebbia-clientes.svg', 'alt' => 'Módulo Clientes de TREBBIA'],
-            ['title' => 'Organiza tu equipo y disponibilidad.', 'copy' => 'Configura profesionales, servicios, horarios y recursos sin complicarte.', 'image' => 'marketing/trebbia-equipo.svg', 'alt' => 'Módulo Profesionales de TREBBIA'],
+            ['title' => 'Visualiza tu día de forma clara.', 'copy' => 'Consulta citas, profesionales, horarios disponibles y próximos servicios desde una agenda central.'],
+            ['title' => 'Toda la información de tus clientes.', 'copy' => 'Mantén datos, contacto e historial listos para cada atención.'],
+            ['title' => 'Organiza tu equipo y disponibilidad.', 'copy' => 'Configura profesionales, servicios, horarios y recursos sin complicarte.'],
         ];
 
         $steps = [
-            ['title' => 'Configura tu negocio', 'copy' => 'Servicios, profesionales, recursos y horarios.', 'image' => 'marketing/trebbia-configuracion.svg'],
-            ['title' => 'Organiza tu agenda', 'copy' => 'Centraliza citas, disponibilidad y responsables.', 'image' => 'marketing/trebbia-agenda.svg'],
-            ['title' => 'Recibe reservas', 'copy' => 'Gestiona solicitudes desde TREBBIA, WhatsApp y enlace público.', 'image' => 'marketing/trebbia-dashboard.svg'],
+            ['title' => 'Configura tu negocio', 'copy' => 'Servicios, profesionales, recursos y horarios.'],
+            ['title' => 'Organiza tu agenda', 'copy' => 'Centraliza citas, disponibilidad y responsables.'],
+            ['title' => 'Recibe reservas', 'copy' => 'Gestiona solicitudes desde TREBBIA, WhatsApp y enlace público.'],
         ];
     @endphp
 
     <div class="min-h-screen bg-[var(--trebbia-bg)] text-[var(--trebbia-ink)]">
         <header class="sticky top-0 z-40 border-b border-[var(--trebbia-line)] bg-[rgba(251,250,247,0.9)] backdrop-blur">
-            <div class="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-6 lg:px-8">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:gap-5 sm:px-5 sm:py-6 lg:px-8">
                 <a href="{{ route('home') }}" class="shrink-0" aria-label="trebbia">
-                    <x-trebbia-logo class="w-72 sm:w-88 lg:w-96" />
+                    <x-trebbia-logo class="w-48 sm:w-72 lg:w-96" />
                 </a>
 
                 <nav class="hidden items-center gap-7 xl:flex" aria-label="Menú principal">
@@ -78,18 +78,18 @@
 
                 <div class="flex items-center gap-2">
                     <a class="hidden rounded-md px-4 py-2 text-sm font-medium text-[var(--trebbia-muted)] hover:bg-white sm:inline-flex" href="{{ route('login') }}">Entrar</a>
-                    <a class="rounded-md bg-[var(--trebbia-petrol)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--trebbia-petrol-dark)]" href="{{ route('register') }}">Crear cuenta</a>
+                    <a class="whitespace-nowrap rounded-md bg-[var(--trebbia-petrol)] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--trebbia-petrol-dark)] sm:px-4" href="{{ route('register') }}">Crear cuenta</a>
                 </div>
             </div>
         </header>
 
         <main>
-            <section class="overflow-hidden px-5 pb-14 pt-8 sm:pt-10 lg:px-8">
+            <section class="overflow-hidden px-4 pb-12 pt-7 sm:px-5 sm:pb-14 sm:pt-10 lg:px-8">
                 <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                     <div>
-                        <x-trebbia-logo class="mb-7 w-full max-w-[34rem]" />
+                        <x-trebbia-logo class="mb-7 w-full max-w-[19rem] sm:max-w-[34rem]" />
                         <p class="trebbia-commercial-kicker">Reservas multicanal</p>
-                        <h1 class="trebbia-commercial-title mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-6xl">
+                        <h1 class="trebbia-commercial-title mt-5 max-w-3xl text-3xl sm:text-5xl lg:text-6xl">
                             Tu agenda, tu equipo y tus clientes. Todo en un solo lugar.
                         </h1>
                         <p class="mt-6 max-w-xl text-lg leading-8 text-[var(--trebbia-muted)]">
@@ -108,7 +108,7 @@
                                 <span class="h-2.5 w-2.5 rounded-full bg-[var(--trebbia-blue-soft)]"></span>
                                 <span class="h-2.5 w-2.5 rounded-full bg-[var(--trebbia-petrol)]"></span>
                             </div>
-                            <img class="block w-full" src="{{ asset('marketing/trebbia-dashboard.svg') }}" alt="Dashboard de TREBBIA con reservas, clientes y canales activos">
+                            <x-marketing-screen screen="dashboard" />
                         </div>
                     </figure>
                 </div>
@@ -125,7 +125,7 @@
                     <div class="mt-10 grid gap-6">
                         <article class="grid gap-6 rounded-3xl border border-[var(--trebbia-line)] bg-[var(--trebbia-bg)] p-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                             <div class="overflow-hidden rounded-2xl border border-[var(--trebbia-line)] bg-white shadow-sm">
-                                <img class="block w-full" src="{{ asset($productCards[0]['image']) }}" alt="{{ $productCards[0]['alt'] }}">
+                                <x-marketing-screen screen="agenda" />
                             </div>
                             <div class="p-3 lg:p-8">
                                 <h3 class="text-2xl font-semibold">{{ $productCards[0]['title'] }}</h3>
@@ -137,7 +137,7 @@
                             @foreach (array_slice($productCards, 1) as $card)
                                 <article class="rounded-3xl border border-[var(--trebbia-line)] bg-white p-4">
                                     <div class="overflow-hidden rounded-2xl border border-[var(--trebbia-line)] bg-white shadow-sm">
-                                        <img class="block w-full" src="{{ asset($card['image']) }}" alt="{{ $card['alt'] }}">
+                                        <x-marketing-screen :screen="$loop->first ? 'clientes' : 'equipo'" />
                                     </div>
                                     <div class="p-3 pt-6">
                                         <h3 class="text-2xl font-semibold">{{ $card['title'] }}</h3>
@@ -180,7 +180,7 @@
                         @foreach ($steps as $step)
                             <article class="rounded-3xl border border-[var(--trebbia-line)] bg-[var(--trebbia-bg)] p-5">
                                 <div class="mb-6 overflow-hidden rounded-2xl border border-[var(--trebbia-line)] bg-white">
-                                    <img class="block w-full" src="{{ asset($step['image']) }}" alt="{{ $step['title'] }} en TREBBIA">
+                                    <x-marketing-screen :screen="$loop->first ? 'configuracion' : ($loop->iteration === 2 ? 'agenda' : 'dashboard')" />
                                 </div>
                                 <span class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--trebbia-aqua-soft)] text-sm font-semibold text-[var(--trebbia-petrol)]">{{ $loop->iteration }}</span>
                                 <h3 class="mt-5 text-xl font-semibold">{{ $step['title'] }}</h3>
