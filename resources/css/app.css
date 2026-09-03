@@ -5,31 +5,35 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
-@font-face {
-    font-family: 'Garet';
-    src: url('/fonts/garet/Garet-Book.woff2') format('woff2'), url('/fonts/garet/Garet-Book.woff') format('woff');
-    font-display: swap;
-    font-style: normal;
-    font-weight: 400 700;
-}
-
-@font-face {
-    font-family: 'Garet';
-    src: url('/fonts/garet/Garet-Heavy.woff2') format('woff2'), url('/fonts/garet/Garet-Heavy.woff') format('woff');
-    font-display: swap;
-    font-style: normal;
-    font-weight: 800 900;
+:root {
+    --trebbia-bg: #fbfaf7;
+    --trebbia-bg-soft: #f2f7f6;
+    --trebbia-surface: #ffffff;
+    --trebbia-surface-muted: #f7f5ef;
+    --trebbia-ink: #1f2933;
+    --trebbia-muted: #66747e;
+    --trebbia-line: #dfe8e5;
+    --trebbia-petrol: #245b63;
+    --trebbia-petrol-dark: #163d45;
+    --trebbia-aqua: #73d7cd;
+    --trebbia-aqua-soft: #e5f7f5;
+    --trebbia-blue-soft: #dceefa;
+    --trebbia-shadow: 0 18px 50px rgba(31, 41, 51, 0.08);
 }
 
 @theme {
-    --font-sans: 'Garet', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Avenir Next', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 @layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
     body {
-        background: #f6f7f4;
-        color: #18211f;
+        background: var(--trebbia-bg);
+        color: var(--trebbia-ink);
     }
 
     a,
@@ -100,5 +104,27 @@
         border-radius: 0.5rem;
         background: #ffffff;
         box-shadow: 0 12px 32px rgba(28, 44, 38, 0.06);
+    }
+
+    .trebbia-commercial-card {
+        border: 1px solid var(--trebbia-line);
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: var(--trebbia-shadow);
+    }
+
+    .trebbia-commercial-kicker {
+        color: var(--trebbia-petrol);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+    }
+
+    .trebbia-commercial-title {
+        color: var(--trebbia-ink);
+        font-weight: 600;
+        letter-spacing: 0;
+        line-height: 1.08;
     }
 }
