@@ -114,6 +114,9 @@ class AppointmentController extends Controller
             'branches' => $business->branches()->where('is_active', true)->orderBy('name')->get(),
             'statuses' => $this->statuses(),
             'availabilityWarnings' => $this->availabilityWarnings($request, $appointment),
+            'reminders' => $appointment->exists
+                ? $appointment->reminders()->with('template')->latest('scheduled_for')->get()
+                : collect(),
         ];
     }
 

@@ -124,4 +124,31 @@
             </div>
         </form>
     </div>
+
+    @if ($appointment->exists)
+        <div class="trebbia-card mt-6 max-w-4xl p-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-bold">Recordatorios</h2>
+                    <p class="mt-1 text-sm text-[#64716d]">Control operativo de avisos asociados a esta cita.</p>
+                </div>
+                <a class="trebbia-button trebbia-button-secondary" href="{{ route('automations.index') }}">Ir a automatizaciones</a>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @forelse ($reminders as $reminder)
+                    <div class="grid gap-3 rounded-md border border-[#e1e6e0] p-4 md:grid-cols-[1fr_8rem_8rem] md:items-center">
+                        <div>
+                            <p class="font-bold">{{ $reminder->template?->name ?: 'Recordatorio' }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $reminder->scheduled_for->format('d/m/Y H:i') }} - {{ ucfirst($reminder->channel) }}</p>
+                        </div>
+                        <p class="text-sm font-semibold text-[#53615d]">{{ ucfirst($reminder->status) }}</p>
+                        <p class="text-sm text-[#64716d]">{{ $reminder->sent_at?->format('d/m/Y H:i') ?: 'Sin envio' }}</p>
+                    </div>
+                @empty
+                    <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Esta cita aun no tiene recordatorios.</p>
+                @endforelse
+            </div>
+        </div>
+    @endif
 @endsection

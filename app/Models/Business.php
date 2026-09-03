@@ -76,6 +76,16 @@ class Business extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function appointmentReminders()
+    {
+        return $this->hasMany(AppointmentReminder::class);
+    }
+
+    public function notificationTemplates()
+    {
+        return $this->hasMany(NotificationTemplate::class);
+    }
+
     public function settings()
     {
         return $this->hasOne(BusinessSettings::class);

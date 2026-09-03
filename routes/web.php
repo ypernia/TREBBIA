@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
@@ -47,6 +48,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('recursos', ResourceController::class)->except(['show']);
         Route::get('/configuracion/horarios', [ScheduleController::class, 'edit'])->name('schedules.edit');
         Route::put('/configuracion/horarios', [ScheduleController::class, 'update'])->name('schedules.update');
+        Route::get('/modulos/automatizaciones', [AutomationController::class, 'index'])->name('automations.index');
+        Route::post('/modulos/automatizaciones/plantillas', [AutomationController::class, 'storeTemplate'])->name('automations.templates.store');
+        Route::put('/modulos/automatizaciones/plantillas/{template}', [AutomationController::class, 'updateTemplate'])->name('automations.templates.update');
+        Route::post('/agenda/{appointment}/recordatorios', [AutomationController::class, 'scheduleReminder'])->name('automations.reminders.schedule');
+        Route::patch('/recordatorios/{reminder}/enviado', [AutomationController::class, 'markReminderSent'])->name('automations.reminders.sent');
+        Route::patch('/recordatorios/{reminder}/omitido', [AutomationController::class, 'skipReminder'])->name('automations.reminders.skip');
         Route::get('/modulos/{module}', ModuleController::class)->name('modules.show');
     });
 });

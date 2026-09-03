@@ -56,4 +56,9 @@ class Appointment extends Model
     {
         return $this->belongsTo(Resource::class);
     }
+
+    public function reminders()
+    {
+        return $this->hasMany(AppointmentReminder::class);
+    }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\AppointmentReminder;
 use App\Models\Business;
 use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
@@ -494,6 +495,89 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Disponibilidad por revisar')
             ->assertSee('El profesional ya tiene una cita en ese horario.');
+    }
+
+    public function test_automations_dashboard_creates_default_template(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('automations.index'))
+            ->assertOk()
+            ->assertSee('Automatizaciones')
+            ->assertSee('Recordatorio de cita');
+
+        $this->assertDatabaseHas('notification_templates', [
+            'business_id' => $business->id,
+            'name' => 'Recordatorio de cita',
+            'trigger' => 'appointment_reminder',
+        ]);
+    }
+
+    public function test_reminder_can_be_scheduled_and_marked_sent(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create(['name' => 'Ana Ruiz']);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => now()->addDays(2)->setTime(9, 0),
+            'ends_at' => now()->addDays(2)->setTime(10, 0),
+            'status' => 'confirmed',
+        ]);
+        $template = $business->notificationTemplates()->create([
+            'name' => 'WhatsApp 24 horas',
+            'channel' => 'whatsapp',
+            'trigger' => 'appointment_reminder',
+            'body' => 'Hola {cliente}, tu cita de {servicio} es el {fecha} a las {hora}.',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('automations.reminders.schedule', $appointment), [
+                'notification_template_id' => $template->id,
+                'channel' => 'whatsapp',
+                'scheduled_for' => now()->addDay()->setTime(9, 0)->format('Y-m-d H:i:s'),
+            ])->assertRedirect(route('automations.index'));
+
+        $reminder = AppointmentReminder::where('business_id', $business->id)->firstOrFail();
+        $this->assertSame(AppointmentReminder::STATUS_PENDING, $reminder->status);
+        $this->assertStringContainsString('Ana Ruiz', $reminder->message_snapshot);
+        $this->assertStringContainsString('Consulta', $reminder->message_snapshot);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('automations.reminders.sent', $reminder))
+            ->assertRedirect(route('automations.index'));
+
+        $this->assertDatabaseHas('appointment_reminders', [
+            'id' => $reminder->id,
+            'status' => AppointmentReminder::STATUS_SENT,
+        ]);
+        $this->assertNotNull($reminder->fresh()->sent_at);
+    }
+
+    public function test_user_cannot_schedule_reminder_for_other_business_appointment(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Other Automation', 'automation-owner@example.com');
+        $appointment = $otherBusiness->appointments()->create([
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDay()->addHour(),
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('automations.reminders.schedule', $appointment), [
+                'channel' => 'manual',
+                'scheduled_for' => now()->format('Y-m-d H:i:s'),
+            ])->assertNotFound();
     }
 
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
