@@ -86,6 +86,11 @@ class Business extends Model
         return $this->hasMany(NotificationTemplate::class);
     }
 
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany();
+    }
+
     public function settings()
     {
         return $this->hasOne(BusinessSettings::class);

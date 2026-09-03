@@ -12,4 +12,9 @@ class Plan extends Model
     {
         return ['limits' => 'array', 'features' => 'array', 'is_active' => 'boolean'];
     }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
 }

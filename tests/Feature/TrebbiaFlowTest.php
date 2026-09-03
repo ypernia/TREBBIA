@@ -8,6 +8,7 @@ use App\Models\Business;
 use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
 use App\Models\Client;
+use App\Models\Plan;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
 use App\Models\Resource;
@@ -813,6 +814,59 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('Dra. Propia')
             ->assertDontSee('Servicio ajeno')
             ->assertDontSee('Dr. Ajeno');
+    }
+
+    public function test_membership_dashboard_creates_plans_and_shows_usage(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $business->appointments()->create([
+            'starts_at' => now()->startOfMonth()->addDay()->setTime(9, 0),
+            'ends_at' => now()->startOfMonth()->addDay()->setTime(10, 0),
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('membership.index'))
+            ->assertOk()
+            ->assertSee('Membresia')
+            ->assertSee('Inicial')
+            ->assertSee('Profesional')
+            ->assertSee('Citas mensuales')
+            ->assertSee('1 / 50');
+
+        $this->assertDatabaseHas('plans', ['code' => 'starter']);
+        $this->assertDatabaseHas('subscriptions', [
+            'business_id' => $business->id,
+            'status' => 'trialing',
+        ]);
+    }
+
+    public function test_membership_plan_can_be_changed_manually(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('membership.index'))
+            ->assertOk();
+
+        $plan = Plan::where('code', 'professional')->firstOrFail();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('membership.update'), [
+                'plan_id' => $plan->id,
+                'status' => 'active',
+            ])->assertRedirect(route('membership.index'));
+
+        $this->assertDatabaseHas('subscriptions', [
+            'business_id' => $business->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_public_booking_page_requires_enabled_public_booking(): void

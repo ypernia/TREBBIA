@@ -16,8 +16,56 @@ return [
         'recursos' => ['label' => 'Recursos', 'status' => 'Funcional', 'route' => 'recursos.index', 'summary' => 'Cabinas, equipos, consultorios u otros recursos reservables.'],
         'automatizaciones' => ['label' => 'Automatizaciones', 'status' => 'Funcional', 'route' => 'automations.index', 'summary' => 'Plantillas y recordatorios operativos para citas.'],
         'reportes' => ['label' => 'Reportes', 'status' => 'Funcional', 'route' => 'reports.index', 'summary' => 'Indicadores de citas, ingresos estimados, servicios, profesionales y clientes.'],
-        'membresia' => ['label' => 'Membresia', 'status' => 'Proximamente', 'summary' => 'Planes, suscripciones y limites comerciales.'],
+        'membresia' => ['label' => 'Membresia', 'status' => 'Funcional', 'route' => 'membership.index', 'summary' => 'Plan actual, uso del negocio y limites comerciales.'],
         'configuracion' => ['label' => 'Configuracion', 'status' => 'Funcional', 'route' => 'settings.index', 'summary' => 'Perfil del negocio, sedes, usuarios base y parametros de agenda.'],
+    ],
+
+    'plans' => [
+        [
+            'name' => 'Inicial',
+            'code' => 'starter',
+            'monthly_price_cents' => 0,
+            'limits' => [
+                'monthly_appointments' => 50,
+                'professionals' => 2,
+                'services' => 5,
+                'branches' => 1,
+                'users' => 1,
+                'public_booking' => true,
+                'automations' => false,
+            ],
+            'features' => ['Agenda', 'Clientes', 'Reservas publicas'],
+        ],
+        [
+            'name' => 'Profesional',
+            'code' => 'professional',
+            'monthly_price_cents' => 4900000,
+            'limits' => [
+                'monthly_appointments' => 300,
+                'professionals' => 8,
+                'services' => 25,
+                'branches' => 3,
+                'users' => 5,
+                'public_booking' => true,
+                'automations' => true,
+            ],
+            'features' => ['Agenda avanzada', 'Reportes', 'Automatizaciones', 'Reservas publicas'],
+        ],
+        [
+            'name' => 'Empresa',
+            'code' => 'business',
+            'monthly_price_cents' => 12900000,
+            'limits' => [
+                'monthly_appointments' => null,
+                'professionals' => null,
+                'services' => null,
+                'branches' => null,
+                'users' => null,
+                'public_booking' => true,
+                'automations' => true,
+            ],
+            'features' => ['Uso ampliado', 'Multiples sedes', 'Equipo completo', 'Soporte prioritario'],
+        ],
     ],
 
     'resource_presets' => [

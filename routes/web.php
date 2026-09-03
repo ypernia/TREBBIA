@@ -6,6 +6,7 @@ use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\NewPasswordController;
 use App\Http\Controllers\OnboardingController;
@@ -68,6 +69,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/recordatorios/{reminder}/enviado', [AutomationController::class, 'markReminderSent'])->name('automations.reminders.sent');
         Route::patch('/recordatorios/{reminder}/omitido', [AutomationController::class, 'skipReminder'])->name('automations.reminders.skip');
         Route::get('/modulos/reportes', ReportController::class)->name('reports.index');
+        Route::get('/modulos/membresia', [MembershipController::class, 'index'])->name('membership.index');
+        Route::put('/modulos/membresia', [MembershipController::class, 'update'])->name('membership.update');
         Route::get('/modulos/{module}', ModuleController::class)->name('modules.show');
     });
 });

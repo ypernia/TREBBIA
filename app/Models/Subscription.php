@@ -12,4 +12,14 @@ class Subscription extends Model
     {
         return ['trial_ends_at' => 'datetime', 'current_period_ends_at' => 'datetime'];
     }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
 }
