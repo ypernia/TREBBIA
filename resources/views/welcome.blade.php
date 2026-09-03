@@ -119,7 +119,7 @@
                         <p class="mb-5 inline-flex rounded-md border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-sm font-bold text-cyan-100">
                             WhatsApp incluido, no WhatsApp exclusivo.
                         </p>
-                        <h1 class="max-w-4xl text-5xl font-black leading-[1.02] sm:text-6xl lg:text-7xl">
+                        <h1 class="max-w-4xl text-5xl font-extrabold leading-[1.04] sm:text-6xl lg:text-7xl">
                             Centraliza tus reservas. Atiende mejor. Crece con orden.
                         </h1>
                         <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-200 sm:text-xl">
@@ -136,8 +136,8 @@
             <section id="plataforma" class="border-b border-slate-200 bg-white px-5 py-16 lg:px-8">
                 <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                     <div>
-                        <p class="text-sm font-black uppercase tracking-[0.28em] text-[#3B82F6]">La plataforma</p>
-                        <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Un centro inteligente para reservas multicanal.</h2>
+                        <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-[#3B82F6]">La plataforma</p>
+                        <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">Un centro inteligente para reservas multicanal.</h2>
                         <p class="mt-5 text-lg leading-8 text-slate-600">
                             TREBBIA conecta agenda, clientes, servicios, profesionales, recursos, automatizaciones y reportes para que cada reserva tenga contexto, responsable y seguimiento.
                         </p>
@@ -146,7 +146,7 @@
                         @foreach (['Agenda clara', 'Cliente centralizado', 'Equipo sincronizado', 'Operacion medible'] as $item)
                             <div class="rounded-lg border border-slate-200 bg-slate-50 p-5">
                                 <span class="mb-5 block h-1.5 w-12 rounded-full bg-[#06B6D4]"></span>
-                                <h3 class="text-lg font-black">{{ $item }}</h3>
+                                <h3 class="text-lg font-extrabold">{{ $item }}</h3>
                                 <p class="mt-3 text-sm leading-6 text-slate-600">Informacion organizada para decidir rapido, atender mejor y evitar reservas duplicadas.</p>
                             </div>
                         @endforeach
@@ -157,13 +157,13 @@
             <section id="canales" class="bg-[#F8FAFC] px-5 py-16 lg:px-8">
                 <div class="mx-auto max-w-7xl">
                     <div class="max-w-2xl">
-                        <p class="text-sm font-black uppercase tracking-[0.28em] text-[#3B82F6]">Canales</p>
-                        <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Tus reservas pueden llegar por distintos caminos. TREBBIA las ordena en uno solo.</h2>
+                        <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-[#3B82F6]">Canales</p>
+                        <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">Tus reservas pueden llegar por distintos caminos. TREBBIA las ordena en uno solo.</h2>
                     </div>
                     <div class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         @foreach ($channels as $channel)
                             <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                                <h3 class="text-lg font-black">{{ $channel['name'] }}</h3>
+                                <h3 class="text-lg font-extrabold">{{ $channel['name'] }}</h3>
                                 <p class="mt-3 text-sm leading-6 text-slate-600">{{ $channel['copy'] }}</p>
                             </article>
                         @endforeach
@@ -174,8 +174,8 @@
             <section id="funciona" class="bg-[#0F172A] px-5 py-16 text-white lg:px-8">
                 <div class="mx-auto max-w-7xl">
                     <div class="max-w-2xl">
-                        <p class="text-sm font-black uppercase tracking-[0.28em] text-cyan-200">Asi funciona</p>
-                        <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">De solicitud a reserva organizada, sin perder control.</h2>
+                        <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-cyan-200">Asi funciona</p>
+                        <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">De solicitud a reserva organizada, sin perder control.</h2>
                     </div>
                     <div class="mt-10 grid gap-4 lg:grid-cols-4">
                         @foreach (['El cliente solicita o agenda una cita.', 'TREBBIA ayuda a validar disponibilidad.', 'Tu equipo confirma o gestiona la reserva.', 'Todo queda organizado con historial y seguimiento.'] as $step)
@@ -191,8 +191,8 @@
             <section id="beneficios" class="bg-white px-5 py-16 lg:px-8">
                 <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
                     <div>
-                        <p class="text-sm font-black uppercase tracking-[0.28em] text-[#3B82F6]">Beneficios</p>
-                        <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Menos desorden. Mas claridad para vender, atender y crecer.</h2>
+                        <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-[#3B82F6]">Beneficios</p>
+                        <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">Menos desorden. Mas claridad para vender, atender y crecer.</h2>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
                         @foreach ($benefits as $benefit)
@@ -209,14 +209,14 @@
                 <div class="mx-auto max-w-7xl">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div class="max-w-2xl">
-                            <p class="text-sm font-black uppercase tracking-[0.28em] text-[#3B82F6]">Capacidades</p>
-                            <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Las piezas esenciales para operar reservas con calidad.</h2>
+                            <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-[#3B82F6]">Capacidades</p>
+                            <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">Las piezas esenciales para operar reservas con calidad.</h2>
                         </div>
                         <p class="max-w-xl text-base leading-7 text-slate-600">Empieza con lo basico y activa nuevas capacidades a medida que tu negocio necesita mas control.</p>
                     </div>
                     <div class="mt-10 flex flex-wrap gap-3">
                         @foreach ($capabilities as $capability)
-                            <span class="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm">{{ $capability }}</span>
+                            <span class="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-extrabold text-slate-700 shadow-sm">{{ $capability }}</span>
                         @endforeach
                     </div>
                 </div>
@@ -225,14 +225,14 @@
             <section id="planes" class="bg-white px-5 py-16 lg:px-8">
                 <div class="mx-auto max-w-7xl">
                     <div class="max-w-2xl">
-                        <p class="text-sm font-black uppercase tracking-[0.28em] text-[#3B82F6]">Planes</p>
-                        <h2 class="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Planes pensados para distintas etapas del negocio.</h2>
+                        <p class="text-sm font-extrabold uppercase tracking-[0.28em] text-[#3B82F6]">Planes</p>
+                        <h2 class="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">Planes pensados para distintas etapas del negocio.</h2>
                     </div>
                     <div class="mt-10 grid gap-5 lg:grid-cols-3">
                         @foreach ($plans as $plan)
                             <article class="rounded-lg border border-slate-200 bg-[#F8FAFC] p-6">
-                                <p class="text-sm font-black uppercase tracking-[0.2em] text-[#64748B]">{{ $plan['price'] }}</p>
-                                <h3 class="mt-4 text-2xl font-black">{{ $plan['name'] }}</h3>
+                                <p class="text-sm font-extrabold uppercase tracking-[0.2em] text-[#64748B]">{{ $plan['price'] }}</p>
+                                <h3 class="mt-4 text-2xl font-extrabold">{{ $plan['name'] }}</h3>
                                 <p class="mt-4 min-h-24 text-sm leading-6 text-slate-600">{{ $plan['copy'] }}</p>
                                 <a class="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-[#0F172A] px-4 text-sm font-black text-white hover:bg-[#1E293B]" href="{{ route('register') }}">Empezar</a>
                             </article>
@@ -244,7 +244,7 @@
             <section class="bg-[#0F172A] px-5 py-16 text-white lg:px-8">
                 <div class="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="text-3xl font-black tracking-tight">Empieza a ordenar tus reservas con TREBBIA.</h2>
+                        <h2 class="text-3xl font-extrabold tracking-tight">Empieza a ordenar tus reservas con TREBBIA.</h2>
                         <p class="mt-3 max-w-2xl text-slate-300">Centraliza tu operacion, atiende mejor por todos tus canales y convierte cada cita en informacion util para crecer.</p>
                     </div>
                     <a class="inline-flex min-h-12 items-center justify-center rounded-md bg-[#06B6D4] px-6 text-base font-black text-[#0F172A] hover:bg-[#67E8F9]" href="{{ route('register') }}">Crear cuenta</a>
