@@ -53,8 +53,8 @@
         <path d="M55 39V82C55 88.63 60.37 94 67 94H78" stroke="#F8FAFC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
         <path d="M39 54H78" stroke="#F8FAFC" stroke-width="9" stroke-linecap="round" />
         <circle cx="92" cy="45" r="9.5" fill="#06B6D4" stroke="#E0F2FE" stroke-width="3" />
-        <text x="138" y="69" fill="#0F172A" font-family="'Plus Jakarta Sans', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="48" font-weight="800" letter-spacing="0">trebbia</text>
+        <text x="138" y="69" fill="#0F172A" font-family="'Garet', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="48" font-weight="800" letter-spacing="0">trebbia</text>
         <circle cx="316" cy="59" r="5.5" fill="url(#{{ $logoId }}-dot)" />
-        <text x="140" y="101" fill="#64748B" font-family="'Plus Jakarta Sans', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="3.4">CENTRO INTELIGENTE DE RESERVAS Y AGENDAMIENTO</text>
+        <text x="140" y="101" fill="#64748B" font-family="'Garet', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="3.4">CENTRO INTELIGENTE DE RESERVAS Y AGENDAMIENTO</text>
     </svg>
 @endif
