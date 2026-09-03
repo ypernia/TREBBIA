@@ -753,6 +753,101 @@ class TrebbiaFlowTest extends TestCase
             ->assertDontSee('Dr. Ajeno');
     }
 
+    public function test_public_booking_page_requires_enabled_public_booking(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'public_booking_settings' => ['allow_public_booking' => false],
+        ]);
+
+        $this->get(route('public-booking.show', $business->slug))
+            ->assertNotFound();
+    }
+
+    public function test_public_booking_creates_client_and_appointment(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => true,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta publica', 'duration_minutes' => 60, 'price_cents' => 12000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Publica', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+
+        $this->get(route('public-booking.show', [
+            $business->slug,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+        ]))
+            ->assertOk()
+            ->assertSee('Consulta publica')
+            ->assertSee('Dra. Publica')
+            ->assertSee('09:00');
+
+        $this->post(route('public-booking.store', $business->slug), [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+            'starts_at' => '09:00',
+            'client_name' => 'Cliente Web',
+            'client_email' => 'clienteweb@example.com',
+            'client_phone' => '3004445566',
+            'notes' => 'Primera reserva desde la web.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('clients', [
+            'business_id' => $business->id,
+            'name' => 'Cliente Web',
+            'email' => 'clienteweb@example.com',
+        ]);
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'service_id' => $service->id,
+            'status' => 'scheduled',
+        ]);
+    }
+
+    public function test_public_booking_can_confirm_automatically_from_settings(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => false,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta automatica', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dr. Automatico', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $this->post(route('public-booking.store', $business->slug), [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+            'starts_at' => '10:00',
+            'client_name' => 'Cliente Confirmado',
+            'client_email' => 'confirmado@example.com',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'status' => 'confirmed',
+        ]);
+    }
+
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
     {
         $user = User::factory()->create(['email' => $email]);

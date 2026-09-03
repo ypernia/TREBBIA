@@ -11,6 +11,7 @@ use App\Http\Controllers\NewPasswordController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PasswordResetLinkController;
 use App\Http\Controllers\ProfessionalController;
+use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ScheduleController;
@@ -21,6 +22,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return auth()->check() ? redirect()->route('dashboard') : view('welcome');
 })->name('home');
+
+Route::get('/reservar/{business:slug}', [PublicBookingController::class, 'show'])->name('public-booking.show');
+Route::post('/reservar/{business:slug}', [PublicBookingController::class, 'store'])->name('public-booking.store');
+Route::get('/reservar/{business:slug}/confirmacion/{appointment}', [PublicBookingController::class, 'confirmation'])->name('public-booking.confirmation');
 
 Route::middleware('guest')->group(function () {
     Route::get('/registro', [AuthController::class, 'showRegister'])->name('register');

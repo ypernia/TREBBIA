@@ -185,6 +185,16 @@
                 </div>
             </section>
 
+            <section class="trebbia-card p-5">
+                <h2 class="text-lg font-bold">Reserva publica</h2>
+                <div class="mt-4 space-y-3 text-sm text-[#53615d]">
+                    <p><span class="font-bold text-[#18211f]">Estado:</span> {{ ($publicBooking['allow_public_booking'] ?? false) ? 'Activa' : 'Inactiva' }}</p>
+                    <a class="break-all font-bold text-[#245f57] hover:underline" href="{{ route('public-booking.show', $business->slug) }}" target="_blank">
+                        {{ route('public-booking.show', $business->slug) }}
+                    </a>
+                </div>
+            </section>
+
             <section class="trebbia-card overflow-hidden">
                 <div class="border-b border-[#e7ebe7] p-5">
                     <h2 class="text-lg font-bold">Usuarios y roles</h2>
