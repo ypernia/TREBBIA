@@ -259,6 +259,73 @@ class TrebbiaFlowTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_agenda_supports_week_view_and_filters(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $otherService = $business->services()->create(['name' => 'Masaje', 'duration_minutes' => 30, 'price_cents' => 50000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $otherProfessional = $business->professionals()->create(['name' => 'Carlos Rios', 'is_active' => true]);
+
+        $business->appointments()->create([
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => 'confirmed',
+        ]);
+        $business->appointments()->create([
+            'service_id' => $otherService->id,
+            'professional_id' => $otherProfessional->id,
+            'starts_at' => '2026-09-08 15:00:00',
+            'ends_at' => '2026-09-08 15:30:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.index', [
+                'view' => 'week',
+                'date' => '2026-09-07',
+                'professional_id' => $professional->id,
+                'service_id' => $service->id,
+                'status' => 'confirmed',
+            ]))
+            ->assertOk()
+            ->assertSee('Semana del 07/09/2026')
+            ->assertSee('Consulta')
+            ->assertSee('Dra. Mora')
+            ->assertDontSee('15:00 - 15:30');
+    }
+
+    public function test_appointment_form_previews_availability_conflict(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $business->appointments()->create([
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.create', [
+                'date' => '2026-09-07',
+                'starts_at' => '09:30',
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Disponibilidad por revisar')
+            ->assertSee('El profesional ya tiene una cita en ese horario.');
+    }
+
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
     {
         $user = User::factory()->create(['email' => $email]);

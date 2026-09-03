@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Service;
 use App\Services\AppointmentAvailabilityService;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,28 +20,49 @@ class AppointmentController extends Controller
     public function index(Request $request): View
     {
         $business = app('activeBusiness');
-        $date = $request->date('date', today());
+        $date = CarbonImmutable::parse($request->input('date', today()->toDateString()), $business->timezone);
+        $view = $request->input('view') === 'week' ? 'week' : 'day';
+        $filters = [
+            'professional_id' => $request->integer('professional_id') ?: null,
+            'service_id' => $request->integer('service_id') ?: null,
+            'status' => $request->input('status'),
+        ];
+        $weekStart = $date->startOfWeek();
+        $weekEnd = $date->endOfWeek();
+
+        $appointmentsQuery = $business->appointments()
+            ->with(['client', 'professional', 'service', 'resource'])
+            ->tap(fn (Builder $query) => $this->applyFilters($query, $filters));
+
+        $appointments = $view === 'week'
+            ? (clone $appointmentsQuery)->whereBetween('starts_at', [$weekStart, $weekEnd])->orderBy('starts_at')->get()
+            : (clone $appointmentsQuery)->whereDate('starts_at', $date)->orderBy('starts_at')->get();
 
         return view('appointments.index', [
             'business' => $business,
             'date' => $date,
-            'appointments' => $business->appointments()
-                ->with(['client', 'professional', 'service', 'resource'])
-                ->whereDate('starts_at', $date)
-                ->orderBy('starts_at')
-                ->get(),
+            'view' => $view,
+            'filters' => $filters,
+            'weekStart' => $weekStart,
+            'weekDays' => collect(range(0, 6))->map(fn (int $days) => $weekStart->addDays($days)),
+            'appointments' => $appointments,
+            'appointmentsByDay' => $appointments->groupBy(fn (Appointment $appointment) => $appointment->starts_at->toDateString()),
             'upcoming' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())
+                ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
                 ->orderBy('starts_at')
                 ->take(8)
                 ->get(),
+            'professionals' => $business->professionals()->where('is_active', true)->orderBy('name')->get(),
+            'services' => $business->services()->where('is_active', true)->orderBy('name')->get(),
+            'statuses' => $this->statuses(),
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('appointments.form', $this->formData(new Appointment));
+        return view('appointments.form', $this->formData(new Appointment, $request));
     }
 
     public function store(Request $request): RedirectResponse
@@ -57,7 +79,7 @@ class AppointmentController extends Controller
     {
         $this->authorizeTenant($appointment);
 
-        return view('appointments.form', $this->formData($appointment));
+        return view('appointments.form', $this->formData($appointment, request()));
     }
 
     public function update(Request $request, Appointment $appointment): RedirectResponse
@@ -78,7 +100,7 @@ class AppointmentController extends Controller
         return redirect()->route('agenda.index')->with('status', 'Cita archivada.');
     }
 
-    private function formData(Appointment $appointment): array
+    private function formData(Appointment $appointment, Request $request): array
     {
         $business = app('activeBusiness');
 
@@ -90,7 +112,8 @@ class AppointmentController extends Controller
             'services' => $business->services()->where('is_active', true)->orderBy('name')->get(),
             'resources' => $business->resources()->where('is_active', true)->orderBy('name')->get(),
             'branches' => $business->branches()->where('is_active', true)->orderBy('name')->get(),
-            'statuses' => ['scheduled' => 'Programada', 'confirmed' => 'Confirmada', 'cancelled' => 'Cancelada', 'completed' => 'Completada'],
+            'statuses' => $this->statuses(),
+            'availabilityWarnings' => $this->availabilityWarnings($request, $appointment),
         ];
     }
 
@@ -148,5 +171,56 @@ class AppointmentController extends Controller
     private function authorizeTenant(Appointment $appointment): void
     {
         abort_unless($appointment->business_id === app('activeBusiness')->id, 404);
+    }
+
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['professional_id'], fn (Builder $query, int $id) => $query->where('professional_id', $id))
+            ->when($filters['service_id'], fn (Builder $query, int $id) => $query->where('service_id', $id))
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status));
+    }
+
+    private function availabilityWarnings(Request $request, Appointment $appointment): array
+    {
+        $business = app('activeBusiness');
+        $serviceId = $request->old('service_id', $request->input('service_id', $appointment->service_id));
+        $professionalId = $request->old('professional_id', $request->input('professional_id', $appointment->professional_id));
+        $resourceId = $request->old('resource_id', $request->input('resource_id', $appointment->resource_id));
+        $date = $request->old('date', $request->input('date', $appointment->exists ? $appointment->starts_at->format('Y-m-d') : null));
+        $time = $request->old('starts_at', $request->input('starts_at', $appointment->exists ? $appointment->starts_at->format('H:i') : null));
+
+        if (! $serviceId || ! $professionalId || ! $date || ! $time) {
+            return [];
+        }
+
+        $service = Service::where('business_id', $business->id)->find($serviceId);
+
+        if (! $service) {
+            return [];
+        }
+
+        $startsAt = CarbonImmutable::parse($date.' '.$time, $business->timezone);
+        $endsAt = $startsAt->addMinutes($service->duration_minutes);
+
+        return $this->availability->validate(
+            $business,
+            $service,
+            $startsAt,
+            $endsAt,
+            (int) $professionalId,
+            $resourceId ? (int) $resourceId : null,
+            $appointment->id,
+        );
+    }
+
+    private function statuses(): array
+    {
+        return [
+            'scheduled' => 'Programada',
+            'confirmed' => 'Confirmada',
+            'cancelled' => 'Cancelada',
+            'completed' => 'Completada',
+        ];
     }
 }

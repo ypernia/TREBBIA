@@ -38,6 +38,12 @@ class AppointmentAvailabilityService
         return $errors;
     }
 
+    public function hasConflicts(Business $business, CarbonInterface $startsAt, CarbonInterface $endsAt, ?int $professionalId, ?int $resourceId, ?int $ignoreAppointmentId = null): bool
+    {
+        return ($professionalId && $this->overlaps($business, $startsAt, $endsAt, 'professional_id', $professionalId, $ignoreAppointmentId))
+            || ($resourceId && $this->overlaps($business, $startsAt, $endsAt, 'resource_id', $resourceId, $ignoreAppointmentId));
+    }
+
     private function isInsideBusinessSchedule(Business $business, CarbonInterface $startsAt, CarbonInterface $endsAt): bool
     {
         $weekday = $startsAt->dayOfWeekIso;
