@@ -29,7 +29,7 @@
         <circle cx="53" cy="26" r="5.5" fill="#73D7CD" stroke="#E5F7F5" stroke-width="2" />
     </svg>
 @else
-    <svg {{ $attributes->merge(['class' => 'h-auto w-56 max-w-full']) }} viewBox="0 0 560 144" fill="none" role="img" aria-label="trebbia. Centro Inteligente de Reservas y Agendamiento">
+    <svg {{ $attributes->merge(['class' => 'h-auto w-64 max-w-full']) }} viewBox="0 0 680 144" fill="none" role="img" aria-label="trebbia. Centro Inteligente de Reservas y Agendamiento">
         <defs>
             <linearGradient id="{{ $logoId }}-surface" x1="14" y1="14" x2="104" y2="108" gradientUnits="userSpaceOnUse">
                 <stop stop-color="#163D45" />
@@ -55,6 +55,6 @@
         <circle cx="92" cy="45" r="9.5" fill="#73D7CD" stroke="#E5F7F5" stroke-width="3" />
         <text x="138" y="69" fill="#1F2933" font-family="'Avenir Next', 'Nunito Sans', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="48" font-weight="700" letter-spacing="0">trebbia</text>
         <circle cx="316" cy="59" r="5.5" fill="url(#{{ $logoId }}-dot)" />
-        <text x="140" y="101" fill="#66747E" font-family="'Avenir Next', 'Nunito Sans', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="3.4">CENTRO INTELIGENTE DE RESERVAS Y AGENDAMIENTO</text>
+        <text x="140" y="101" fill="#66747E" font-family="'Avenir Next', 'Nunito Sans', 'Inter', 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" letter-spacing="2.6">CENTRO INTELIGENTE DE RESERVAS Y AGENDAMIENTO</text>
     </svg>
 @endif
