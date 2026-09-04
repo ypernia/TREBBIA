@@ -16,6 +16,7 @@ return [
         'recursos' => ['label' => 'Recursos', 'status' => 'Funcional', 'route' => 'recursos.index', 'summary' => 'Cabinas, equipos, consultorios u otros recursos reservables.'],
         'automatizaciones' => ['label' => 'Automatizaciones', 'status' => 'Funcional', 'route' => 'automations.index', 'summary' => 'Plantillas y recordatorios operativos para citas.'],
         'compartir' => ['label' => 'Compartir reservas', 'status' => 'Funcional', 'route' => 'sharing.index', 'summary' => 'Enlaces publicos, QR, mensajes sugeridos y checklist para salir a vender.'],
+        'whatsapp_automatico' => ['label' => 'WhatsApp automatico', 'status' => 'Funcional', 'route' => 'whatsapp-activation.create', 'summary' => 'Solicitud administrada para que TREBBIA active WhatsApp automatico sin friccion para el negocio.'],
         'whatsapp_demo' => ['label' => 'WhatsApp demo', 'status' => 'Funcional', 'route' => 'whatsapp-simulator.index', 'summary' => 'Simulador interno para probar conversaciones y reservas sin conectar Meta.'],
         'reportes' => ['label' => 'Reportes', 'status' => 'Funcional', 'route' => 'reports.index', 'summary' => 'Indicadores de citas, ingresos estimados, servicios, profesionales y clientes.'],
         'membresia' => ['label' => 'Membresia', 'status' => 'Funcional', 'route' => 'membership.index', 'summary' => 'Plan actual, uso del negocio y limites comerciales.'],

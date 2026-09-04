@@ -91,6 +91,11 @@ class Business extends Model
         return $this->hasMany(WhatsAppAccount::class);
     }
 
+    public function whatsappActivationRequests()
+    {
+        return $this->hasMany(WhatsAppActivationRequest::class);
+    }
+
     public function conversations()
     {
         return $this->hasMany(Conversation::class);

@@ -17,6 +17,7 @@ use App\Models\Resource;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\WhatsAppAccount;
+use App\Models\WhatsAppActivationRequest;
 use App\Services\BookingEngine;
 use App\Services\ConversationManager;
 use Carbon\CarbonImmutable;
@@ -1087,6 +1088,59 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('QR pagina publica')
             ->assertSee('Mensajes sugeridos')
             ->assertSee('Checklist de activacion');
+    }
+
+    public function test_whatsapp_activation_request_can_be_submitted(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('whatsapp-activation.create'))
+            ->assertOk()
+            ->assertSee('Solicita WhatsApp automatico')
+            ->assertSee('Activacion administrada');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('whatsapp-activation.store'), [
+                'commercial_name' => 'Clinica Demo',
+                'legal_name' => 'Clinica Demo SAS',
+                'tax_id' => '900123456',
+                'country' => 'Colombia',
+                'city' => 'Bogota',
+                'address' => 'Calle 10 # 20-30',
+                'industry' => 'Fisioterapia',
+                'website_or_instagram' => '@clinicademo',
+                'public_email' => 'hola@clinicademo.test',
+                'public_phone' => '6011234567',
+                'responsible_name' => 'Laura Mora',
+                'responsible_role' => 'Administradora',
+                'responsible_email' => 'laura@clinicademo.test',
+                'responsible_phone' => '+57 300 111 2233',
+                'whatsapp_number' => '+57 311 330 2090',
+                'verification_method' => 'both',
+                'uses_whatsapp_business' => 1,
+                'whatsapp_display_name' => 'Clinica Demo',
+                'whatsapp_description' => 'Centro de fisioterapia y bienestar.',
+                'whatsapp_category' => 'Salud y bienestar',
+                'business_hours' => 'Lunes a viernes de 8:00 a 18:00',
+                'number_owner_confirmed' => 1,
+                'managed_activation_accepted' => 1,
+                'messaging_costs_accepted' => 1,
+                'client_notes' => 'Queremos activar el flujo de reservas.',
+            ])
+            ->assertRedirect(route('whatsapp-activation.create'));
+
+        $this->assertDatabaseHas('whatsapp_activation_requests', [
+            'business_id' => $business->id,
+            'commercial_name' => 'Clinica Demo',
+            'whatsapp_number' => '+57 311 330 2090',
+            'status' => WhatsAppActivationRequest::STATUS_SUBMITTED,
+            'number_owner_confirmed' => true,
+            'managed_activation_accepted' => true,
+            'messaging_costs_accepted' => true,
+        ]);
     }
 
     public function test_public_booking_creates_client_and_appointment(): void

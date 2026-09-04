@@ -113,8 +113,9 @@
 
             <section class="trebbia-card p-5">
                 <h2 class="text-lg font-bold">Siguiente accion</h2>
-                <p class="mt-3 text-sm text-[#64716d]">Comparte primero el enlace publico con clientes cercanos. Cuando el negocio ya reciba reservas, activa WhatsApp como canal visible.</p>
+                <p class="mt-3 text-sm text-[#64716d]">Comparte primero el enlace publico con clientes cercanos. Cuando quieras automatizar respuestas reales por WhatsApp, solicita la activacion administrada.</p>
                 <a class="trebbia-button mt-4 w-full text-center" href="{{ route('public-booking.show', $business->slug) }}" target="_blank">Ver experiencia del cliente</a>
+                <a class="trebbia-button trebbia-button-secondary mt-3 w-full text-center" href="{{ route('whatsapp-activation.create') }}">Solicitar WhatsApp automatico</a>
             </section>
         </aside>
     </div>

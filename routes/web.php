@@ -22,6 +22,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SharingController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WhatsAppSimulatorController;
+use App\Http\Controllers\WhatsAppActivationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -82,6 +83,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/modulos/membresia', [MembershipController::class, 'index'])->name('membership.index');
         Route::put('/modulos/membresia', [MembershipController::class, 'update'])->name('membership.update');
         Route::get('/modulos/compartir-reservas', SharingController::class)->name('sharing.index');
+        Route::get('/modulos/whatsapp-automatico', [WhatsAppActivationController::class, 'create'])->name('whatsapp-activation.create');
+        Route::post('/modulos/whatsapp-automatico', [WhatsAppActivationController::class, 'store'])->name('whatsapp-activation.store');
         Route::get('/modulos/whatsapp-demo', [WhatsAppSimulatorController::class, 'index'])->name('whatsapp-simulator.index');
         Route::post('/modulos/whatsapp-demo', [WhatsAppSimulatorController::class, 'store'])->name('whatsapp-simulator.store');
         Route::post('/modulos/whatsapp-demo/{conversation}/reiniciar', [WhatsAppSimulatorController::class, 'reset'])->name('whatsapp-simulator.reset');
