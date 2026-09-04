@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\BlockedTime;
 use App\Models\Business;
 use App\Models\Professional;
 use App\Models\Resource;
@@ -51,6 +52,10 @@ class AppointmentAvailabilityService
         if ($resourceId && Resource::whereKey($resourceId)->where('business_id', $business->id)->exists()
             && $this->overlaps($business, $startsAt, $endsAt, 'resource_id', $resourceId, $ignoreAppointmentId)) {
             $errors[] = 'El recurso ya esta reservado en ese horario.';
+        }
+
+        if ($this->hasBlockedTime($business, $startsAt, $endsAt, $professionalId, $resourceId)) {
+            $errors[] = 'El horario esta bloqueado en la agenda.';
         }
 
         return $errors;
@@ -130,6 +135,23 @@ class AppointmentAvailabilityService
             ->when($ignoreAppointmentId, fn ($query) => $query->whereKeyNot($ignoreAppointmentId))
             ->where('starts_at', '<', $endsAt)
             ->where('ends_at', '>', $startsAt)
+            ->exists();
+    }
+
+    private function hasBlockedTime(Business $business, CarbonInterface $startsAt, CarbonInterface $endsAt, ?int $professionalId, ?int $resourceId): bool
+    {
+        return BlockedTime::query()
+            ->where('business_id', $business->id)
+            ->where('starts_at', '<', $endsAt)
+            ->where('ends_at', '>', $startsAt)
+            ->where(function ($query) use ($professionalId, $resourceId): void {
+                $query
+                    ->where(function ($query): void {
+                        $query->whereNull('professional_id')->whereNull('resource_id');
+                    })
+                    ->when($professionalId, fn ($query, int $id) => $query->orWhere('professional_id', $id))
+                    ->when($resourceId, fn ($query, int $id) => $query->orWhere('resource_id', $id));
+            })
             ->exists();
     }
 }

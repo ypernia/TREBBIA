@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
+use App\Models\BlockedTime;
 use App\Models\Business;
 use App\Models\BusinessInvitation;
 use App\Models\BusinessSchedule;
@@ -15,7 +16,10 @@ use App\Models\ProfessionalSchedule;
 use App\Models\Resource;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\BookingEngine;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class TrebbiaFlowTest extends TestCase
@@ -1070,6 +1074,57 @@ class TrebbiaFlowTest extends TestCase
         $this->assertDatabaseHas('appointments', [
             'business_id' => $business->id,
             'status' => 'confirmed',
+        ]);
+    }
+
+    public function test_booking_engine_returns_available_slots_and_respects_blocked_times(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+        ]);
+        $service = $business->services()->create(['name' => 'Reserva central', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Motor', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        BlockedTime::create([
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'reason' => 'Reunion interna',
+        ]);
+
+        $engine = app(BookingEngine::class);
+        $slots = $engine->availableSlots($business, $service, $professional->id, CarbonImmutable::parse('2026-09-07', $business->timezone));
+
+        $this->assertNotContains('09:00', $slots->map->format('H:i')->all());
+        $this->assertContains('10:00', $slots->map->format('H:i')->all());
+    }
+
+    public function test_booking_engine_prevents_creating_appointment_on_blocked_time(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update(['booking_notice_minutes' => 0]);
+        $service = $business->services()->create(['name' => 'Reserva bloqueada', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dr. Bloqueo', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        BlockedTime::create([
+            'business_id' => $business->id,
+            'starts_at' => '2026-09-07 11:00:00',
+            'ends_at' => '2026-09-07 12:00:00',
+            'reason' => 'Bloqueo general',
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        app(BookingEngine::class)->createAppointment($business, [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => CarbonImmutable::parse('2026-09-07 11:00', $business->timezone),
+            'status' => 'scheduled',
         ]);
     }
 

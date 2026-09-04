@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Service;
 use App\Services\AppointmentAvailabilityService;
+use App\Services\BookingEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,10 @@ use Illuminate\View\View;
 
 class AppointmentController extends Controller
 {
-    public function __construct(private AppointmentAvailabilityService $availability) {}
+    public function __construct(
+        private AppointmentAvailabilityService $availability,
+        private BookingEngine $booking,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -69,7 +73,7 @@ class AppointmentController extends Controller
     {
         $attributes = $this->validated($request);
 
-        app('activeBusiness')->appointments()->create($attributes);
+        $this->booking->createAppointment(app('activeBusiness'), $attributes);
 
         return redirect()->route('agenda.index', ['date' => $attributes['starts_at']->toDateString()])
             ->with('status', 'Cita creada.');
