@@ -14,9 +14,23 @@ class ClinicalRecordController extends Controller
     {
         $business = app('activeBusiness');
         abort_unless(ModuleAvailability::clinicalHistory($business), 404);
+        $search = request()->string('q')->toString();
 
         return view('clinical-records.index', [
             'business' => $business,
+            'search' => $search,
+            'clients' => $business->clients()
+                ->when($search, fn ($query) => $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('document_number', 'like', "%{$search}%");
+                }))
+                ->withCount(['appointments', 'clinicalRecords'])
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->take(8)
+                ->get(),
             'records' => $business->clinicalRecords()
                 ->with(['client', 'professional', 'appointment.service'])
                 ->latest('record_date')

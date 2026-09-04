@@ -35,7 +35,7 @@
 
     <div class="grid gap-6 xl:grid-cols-[22rem_1fr]">
         <aside class="space-y-6">
-            <section class="trebbia-card p-5">
+            <section id="historia-clinica" class="trebbia-card scroll-mt-6 p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-bold">Ficha</h2>

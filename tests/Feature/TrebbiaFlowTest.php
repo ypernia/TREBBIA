@@ -322,6 +322,8 @@ class TrebbiaFlowTest extends TestCase
             ->withSession(['business_id' => $business->id])
             ->get(route('clinical-records.index'))
             ->assertOk()
+            ->assertSee('Selecciona un paciente')
+            ->assertSee('Buscar paciente')
             ->assertSee('Dolor lumbar')
             ->assertSee('Ana Ruiz');
     }
