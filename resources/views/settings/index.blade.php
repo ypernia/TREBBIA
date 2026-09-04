@@ -12,6 +12,7 @@
         $whatsappPhone = preg_replace('/\D+/', '', $whatsapp['phone'] ?? '');
         $whatsappLink = $whatsappPhone ? 'https://wa.me/'.$whatsappPhone.'?text='.rawurlencode($whatsapp['entry_message'] ?? '') : null;
         $whatsappQr = $whatsappLink ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.rawurlencode($whatsappLink) : null;
+        $webhookUrl = route('webhooks.meta.whatsapp.receive');
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -151,6 +152,18 @@
                     <div>
                         <label class="trebbia-label" for="entry_message">Mensaje inicial del enlace</label>
                         <input class="trebbia-input" id="entry_message" name="entry_message" value="{{ old('entry_message', $whatsapp['entry_message'] ?? '') }}" required>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="phone_number_id">Meta phone number ID</label>
+                        <input class="trebbia-input" id="phone_number_id" name="phone_number_id" value="{{ old('phone_number_id', $whatsappAccount?->phone_number_id) }}" placeholder="Ej: 123456789012345">
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="waba_id">WhatsApp Business Account ID</label>
+                        <input class="trebbia-input" id="waba_id" name="waba_id" value="{{ old('waba_id', $whatsappAccount?->waba_id) }}" placeholder="Ej: 987654321098765">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="trebbia-label" for="access_token">Token de acceso Cloud API</label>
+                        <input class="trebbia-input" id="access_token" name="access_token" type="password" autocomplete="new-password" placeholder="{{ $whatsappAccount?->access_token ? 'Token guardado cifrado. Escribe uno nuevo solo si deseas reemplazarlo.' : 'Pega aqui el token permanente o temporal de Meta' }}">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="trebbia-label" for="welcome_message">Mensaje de bienvenida</label>
@@ -362,6 +375,9 @@
                 <div class="mt-4 space-y-4 text-sm text-[#53615d]">
                     <p><span class="font-bold text-[#18211f]">Estado:</span> {{ ($whatsapp['enabled'] ?? false) ? 'Activa' : 'Inactiva' }}</p>
                     <p><span class="font-bold text-[#18211f]">Numero:</span> {{ $whatsappPhone ?: 'Sin configurar' }}</p>
+                    <p><span class="font-bold text-[#18211f]">Meta:</span> {{ $whatsappAccount?->status ?: 'Sin conectar' }}</p>
+                    <p><span class="font-bold text-[#18211f]">Webhook:</span></p>
+                    <p class="break-all rounded-md border border-[#e1e6e0] bg-white p-3 font-semibold text-[#245f57]">{{ $webhookUrl }}</p>
                     @if ($whatsappLink)
                         <a class="break-all font-bold text-[#245f57] hover:underline" href="{{ $whatsappLink }}" target="_blank">{{ $whatsappLink }}</a>
                         <div class="rounded-md border border-[#e1e6e0] bg-white p-3">

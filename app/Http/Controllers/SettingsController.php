@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\WhatsAppAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,6 +19,7 @@ class SettingsController extends Controller
         return view('settings.index', [
             'business' => $business,
             'settings' => $settings,
+            'whatsappAccount' => $business->whatsappAccounts()->latest()->first(),
             'branches' => $business->branches()->latest()->get(),
             'users' => $business->businessUsers()->with('user')->latest()->get(),
             'invitations' => $business->invitations()->where('status', 'pending')->latest()->get(),
@@ -98,6 +100,9 @@ class SettingsController extends Controller
             'unavailable_message' => ['required', 'string', 'max:500'],
             'confirmation_message' => ['required', 'string', 'max:500'],
             'appointment_status' => ['required', Rule::in(['scheduled', 'confirmed'])],
+            'phone_number_id' => ['nullable', 'string', 'max:120'],
+            'waba_id' => ['nullable', 'string', 'max:120'],
+            'access_token' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $settings = array_merge($this->defaultWhatsappSettings($business), [
@@ -114,6 +119,33 @@ class SettingsController extends Controller
         ]);
 
         $business->settings()->firstOrCreate([])->update(['whatsapp_settings' => $settings]);
+
+        if ($attributes['phone_number_id'] ?? null) {
+            abort_if(
+                WhatsAppAccount::where('phone_number_id', $attributes['phone_number_id'])
+                    ->where('business_id', '!=', $business->id)
+                    ->exists(),
+                422,
+                'Este phone number ID ya esta asociado a otro negocio.',
+            );
+
+            $account = WhatsAppAccount::updateOrCreate(
+                ['phone_number_id' => $attributes['phone_number_id']],
+                [
+                    'business_id' => $business->id,
+                    'display_name' => $settings['display_name'],
+                    'phone' => $settings['phone'],
+                    'waba_id' => $attributes['waba_id'] ?? null,
+                    'is_active' => $settings['enabled'],
+                    'status' => $settings['enabled'] ? 'configured' : 'disabled',
+                    'metadata' => ['mode' => 'cloud_api'],
+                ],
+            );
+
+            if ($attributes['access_token'] ?? null) {
+                $account->update(['access_token' => $attributes['access_token']]);
+            }
+        }
 
         return redirect()->route('settings.index')->with('status', 'Canal WhatsApp actualizado.');
     }

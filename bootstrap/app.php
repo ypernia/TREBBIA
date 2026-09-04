@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'business' => EnsureBusinessSelected::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/meta/whatsapp',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

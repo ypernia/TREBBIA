@@ -7,6 +7,7 @@ use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipController;
+use App\Http\Controllers\MetaWhatsAppWebhookController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\NewPasswordController;
 use App\Http\Controllers\OnboardingController;
@@ -29,6 +30,8 @@ Route::get('/', function () {
 Route::get('/reservar/{business:slug}', [PublicBookingController::class, 'show'])->name('public-booking.show');
 Route::post('/reservar/{business:slug}', [PublicBookingController::class, 'store'])->name('public-booking.store');
 Route::get('/reservar/{business:slug}/confirmacion/{appointment}', [PublicBookingController::class, 'confirmation'])->name('public-booking.confirmation');
+Route::get('/webhooks/meta/whatsapp', [MetaWhatsAppWebhookController::class, 'verify'])->name('webhooks.meta.whatsapp.verify');
+Route::post('/webhooks/meta/whatsapp', [MetaWhatsAppWebhookController::class, 'receive'])->name('webhooks.meta.whatsapp.receive');
 
 Route::middleware('guest')->group(function () {
     Route::get('/registro', [AuthController::class, 'showRegister'])->name('register');

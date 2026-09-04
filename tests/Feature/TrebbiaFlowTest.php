@@ -16,10 +16,12 @@ use App\Models\ProfessionalSchedule;
 use App\Models\Resource;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\WhatsAppAccount;
 use App\Services\BookingEngine;
 use App\Services\ConversationManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -419,6 +421,9 @@ class TrebbiaFlowTest extends TestCase
                 'unavailable_message' => 'No hay horarios para esa opcion.',
                 'confirmation_message' => 'Tu cita quedo lista.',
                 'appointment_status' => 'confirmed',
+                'phone_number_id' => '1234567890',
+                'waba_id' => '9876543210',
+                'access_token' => 'EAAB_demo_token',
             ])
             ->assertRedirect(route('settings.index'));
 
@@ -429,6 +434,12 @@ class TrebbiaFlowTest extends TestCase
         $this->assertSame('573113302090', $settings['phone']);
         $this->assertSame('confirmed', $settings['appointment_status']);
         $this->assertSame('simulated', $settings['status']);
+        $this->assertDatabaseHas('whatsapp_accounts', [
+            'business_id' => $business->id,
+            'phone_number_id' => '1234567890',
+            'waba_id' => '9876543210',
+            'is_active' => true,
+        ]);
     }
 
     public function test_team_invitation_creates_pending_invitation_for_new_email(): void
@@ -1344,6 +1355,95 @@ class TrebbiaFlowTest extends TestCase
             'starts_at' => '2026-09-07 10:00:00',
             'source_channel' => Appointment::SOURCE_WHATSAPP,
         ]);
+    }
+
+    public function test_meta_whatsapp_webhook_can_be_verified(): void
+    {
+        config(['services.whatsapp.verify_token' => 'trebbia-test-token']);
+
+        $this->get('/webhooks/meta/whatsapp?hub_mode=subscribe&hub_verify_token=trebbia-test-token&hub_challenge=abc123')
+            ->assertOk()
+            ->assertSee('abc123');
+    }
+
+    public function test_meta_whatsapp_webhook_receives_message_and_sends_reply(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.outbound-1']],
+            ], 200),
+        ]);
+
+        [, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573113302090',
+                'confirmation_message' => 'Tu cita quedo confirmada.',
+                'appointment_status' => 'confirmed',
+                'mode' => 'cloud_api',
+            ],
+        ]);
+        $business->whatsappAccounts()->create([
+            'display_name' => 'TREBBIA Salud',
+            'phone' => '573113302090',
+            'phone_number_id' => '1234567890',
+            'waba_id' => '9876543210',
+            'access_token' => 'EAAB_demo_token',
+            'is_active' => true,
+            'status' => 'configured',
+        ]);
+        $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+
+        $payload = [
+            'entry' => [[
+                'changes' => [[
+                    'value' => [
+                        'metadata' => ['phone_number_id' => '1234567890'],
+                        'contacts' => [[
+                            'wa_id' => '573001112233',
+                            'profile' => ['name' => 'Ana WhatsApp'],
+                        ]],
+                        'messages' => [[
+                            'from' => '573001112233',
+                            'id' => 'wamid.inbound-1',
+                            'timestamp' => (string) now()->timestamp,
+                            'type' => 'text',
+                            'text' => ['body' => 'Quiero agendar fisioterapia con Laura el 2026/09/07 a las 9'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ];
+
+        $this->postJson(route('webhooks.meta.whatsapp.receive'), $payload)
+            ->assertOk()
+            ->assertSee('EVENT_RECEIVED');
+
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'source_channel' => Appointment::SOURCE_WHATSAPP,
+            'status' => 'confirmed',
+        ]);
+        $this->assertDatabaseHas('conversation_messages', [
+            'business_id' => $business->id,
+            'external_message_id' => 'wamid.inbound-1',
+            'direction' => 'inbound',
+        ]);
+        $this->assertDatabaseHas('conversation_messages', [
+            'business_id' => $business->id,
+            'direction' => 'outbound',
+            'status' => 'sent',
+        ]);
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/1234567890/messages')
+            && $request['to'] === '573001112233');
     }
 
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
