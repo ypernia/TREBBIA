@@ -5,6 +5,8 @@ Producto: TREBBIA, Centro Inteligente de Reservas y Agendamiento
 
 Este manual explica cómo usar TREBBIA desde la perspectiva de un negocio que necesita organizar reservas, agenda, clientes, profesionales, servicios y recursos. Está escrito para propietarios, administradores, recepcionistas y profesionales.
 
+Versión visual navegable: [`visual/index.html`](visual/index.html)
+
 TREBBIA no reemplaza los criterios operativos, comerciales o clínicos del negocio. La plataforma ayuda a ordenar información, citas y procesos; cada empresa es responsable de la información que registra.
 
 ## 1. Introducción
@@ -680,4 +682,3 @@ La elaboración del manual funcionó como una segunda auditoría UX. Estos halla
 ## 25. Siguiente mejora de documentación recomendada
 
 Crear una versión visual del manual con capturas oficiales generadas desde datos demo, idealmente automatizadas, para que cada nueva mejora de TREBBIA pueda actualizar la documentación sin trabajo manual repetitivo.
-
