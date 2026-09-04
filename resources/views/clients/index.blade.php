@@ -45,21 +45,29 @@
                     {{ $client->is_active ? 'Activo' : 'Inactivo' }}
                 </span>
                 <div class="flex items-center gap-2 md:justify-end">
-                    <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('clientes.show', $client) }}">Ver</a>
-                    <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('clientes.edit', $client) }}">Editar</a>
-                    <form method="POST" action="{{ route('clientes.destroy', $client) }}">
+                    <a class="trebbia-icon-button" href="{{ route('clientes.show', $client) }}" title="Ver cliente" aria-label="Ver cliente {{ $client->name }}">
+                        <x-icon name="eye" class="size-4" />
+                    </a>
+                    <a class="trebbia-icon-button" href="{{ route('clientes.edit', $client) }}" title="Editar cliente" aria-label="Editar cliente {{ $client->name }}">
+                        <x-icon name="edit" class="size-4" />
+                    </a>
+                    <form method="POST" action="{{ route('clientes.destroy', $client) }}" onsubmit="return confirm('Archivar este cliente?');">
                         @csrf
                         @method('DELETE')
-                        <button class="rounded-md border border-[#f0c9c4] px-3 py-2 text-sm font-bold text-[#8a3027]">Archivar</button>
+                        <button class="trebbia-icon-button trebbia-icon-button-danger" title="Archivar cliente" aria-label="Archivar cliente {{ $client->name }}">
+                            <x-icon name="archive" class="size-4" />
+                        </button>
                     </form>
                 </div>
             </div>
         @empty
-            <div class="p-8 text-center">
-                <p class="font-bold">No hay clientes todavia</p>
-                <p class="mt-2 text-sm text-[#64716d]">Crea una base de clientes para luego agendar citas y consultar historial.</p>
-                <a class="trebbia-button mt-5" href="{{ route('clientes.create') }}">Crear cliente</a>
-            </div>
+            <x-empty-state
+                icon="users"
+                title="No hay clientes todavia"
+                body="Crea el primero para agendar citas, consultar historial y centralizar su informacion."
+                :action="route('clientes.create')"
+                action-label="Crear cliente"
+            />
         @endforelse
     </div>
 

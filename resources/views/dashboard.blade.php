@@ -7,14 +7,19 @@
 @section('content')
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ([
-            ['label' => 'Citas de hoy', 'value' => $metrics['todayAppointments']],
-            ['label' => 'Proximas citas', 'value' => $metrics['upcomingAppointments']],
-            ['label' => 'Clientes', 'value' => $metrics['clients']],
-            ['label' => 'Profesionales activos', 'value' => $metrics['professionals']],
-            ['label' => 'Servicios activos', 'value' => $metrics['services']],
+            ['label' => 'Citas de hoy', 'value' => $metrics['todayAppointments'], 'icon' => 'calendar'],
+            ['label' => 'Proximas citas', 'value' => $metrics['upcomingAppointments'], 'icon' => 'calendar'],
+            ['label' => 'Clientes', 'value' => $metrics['clients'], 'icon' => 'users'],
+            ['label' => 'Profesionales activos', 'value' => $metrics['professionals'], 'icon' => 'users'],
+            ['label' => 'Servicios activos', 'value' => $metrics['services'], 'icon' => 'briefcase'],
         ] as $metric)
             <div class="trebbia-card p-5">
-                <p class="text-sm font-semibold text-[#64716d]">{{ $metric['label'] }}</p>
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-[#64716d]">{{ $metric['label'] }}</p>
+                    <span class="flex size-9 items-center justify-center rounded-md bg-[#edf7f4] text-[#245f57]">
+                        <x-icon :name="$metric['icon']" class="size-4" />
+                    </span>
+                </div>
                 <p class="mt-3 text-3xl font-bold">{{ $metric['value'] }}</p>
             </div>
         @endforeach
@@ -58,10 +63,14 @@
                 </div>
 
                 @if ($upcomingAppointments->isEmpty())
-                    <div class="mt-6 rounded-md border border-dashed border-[#cfd8d2] bg-[#f8faf8] p-8 text-center">
-                        <p class="font-bold">Aun no hay citas programadas</p>
-                        <p class="mx-auto mt-2 max-w-md text-sm text-[#64716d]">Comparte tu pagina de reservas o crea una cita manual para empezar a llenar la agenda.</p>
-                    </div>
+                    <x-empty-state
+                        class="mt-6 rounded-md border border-dashed border-[#cfd8d2] bg-[#f8faf8]"
+                        icon="calendar"
+                        title="Aun no hay citas programadas"
+                        body="Comparte tu pagina de reservas o crea una cita manual para empezar."
+                        :action="route('agenda.create')"
+                        action-label="Crear cita"
+                    />
                 @else
                     <div class="mt-5 space-y-3">
                         @foreach ($upcomingAppointments as $appointment)

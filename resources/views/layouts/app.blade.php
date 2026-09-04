@@ -13,11 +13,12 @@
 <body class="min-h-screen bg-[#f6f7f4] font-sans text-[#18211f] antialiased">
     @php
         $nav = [
-            ['label' => 'Inicio', 'href' => route('dashboard'), 'active' => request()->routeIs('dashboard')],
+            ['label' => 'Inicio', 'icon' => 'home', 'href' => route('dashboard'), 'active' => request()->routeIs('dashboard')],
             ...collect(config('trebbia.modules'))
                 ->filter(fn ($item, $key) => \App\Support\ModuleAvailability::isAvailable($key, $activeBusiness ?? null))
                 ->map(fn ($item, $key) => [
                 'label' => $item['label'],
+                'icon' => $item['icon'] ?? 'home',
                 'href' => isset($item['route']) ? route($item['route']) : route('modules.show', $key),
                 'active' => isset($item['route']) ? request()->routeIs(str_replace('.index', '.*', $item['route'])) || request()->routeIs($item['route']) : request()->is("modulos/{$key}"),
             ])->values()->all(),
@@ -37,7 +38,8 @@
             </div>
             <nav class="flex gap-2 overflow-x-auto px-4 pb-4 lg:block lg:space-y-1 lg:overflow-visible">
                 @foreach ($nav as $item)
-                    <a href="{{ $item['href'] }}" class="block whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold {{ $item['active'] ? 'bg-[#e7f1ed] text-[#245f57]' : 'text-[#53615d] hover:bg-[#f1f4f1] hover:text-[#18211f]' }}">
+                    <a href="{{ $item['href'] }}" class="flex min-h-10 items-center gap-3 whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold {{ $item['active'] ? 'bg-[#e7f1ed] text-[#245f57]' : 'text-[#53615d] hover:bg-[#f1f4f1] hover:text-[#18211f]' }}">
+                        <x-icon :name="$item['icon']" class="size-4 shrink-0" />
                         {{ $item['label'] }}
                     </a>
                 @endforeach

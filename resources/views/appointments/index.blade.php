@@ -129,20 +129,26 @@
                         <span class="w-fit rounded-md px-2 py-1 text-xs font-bold {{ $statusStyles[$appointment->status] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $statuses[$appointment->status] ?? ucfirst($appointment->status) }}</span>
                         <div class="flex items-center gap-2 md:justify-end">
                             <span class="hidden rounded-md px-2 py-1 text-xs font-bold md:inline-flex {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
-                            <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('agenda.edit', $appointment) }}">Editar</a>
-                            <form method="POST" action="{{ route('agenda.destroy', $appointment) }}">
+                            <a class="trebbia-icon-button" href="{{ route('agenda.edit', $appointment) }}" title="Editar cita" aria-label="Editar cita de {{ $appointment->client?->name ?: 'cliente sin asignar' }}">
+                                <x-icon name="edit" class="size-4" />
+                            </a>
+                            <form method="POST" action="{{ route('agenda.destroy', $appointment) }}" onsubmit="return confirm('Archivar esta cita?');">
                                 @csrf
                                 @method('DELETE')
-                                <button class="rounded-md border border-[#f0c9c4] px-3 py-2 text-sm font-bold text-[#8a3027]">Archivar</button>
+                                <button class="trebbia-icon-button trebbia-icon-button-danger" title="Archivar cita" aria-label="Archivar cita">
+                                    <x-icon name="archive" class="size-4" />
+                                </button>
                             </form>
                         </div>
                     </div>
                 @empty
-                    <div class="p-8 text-center">
-                        <p class="font-bold">No hay citas en este dia</p>
-                        <p class="mx-auto mt-2 max-w-md text-sm text-[#64716d]">Crea una cita usando un servicio y un profesional activo. TREBBIA validara horario y traslapes antes de guardar.</p>
-                        <a class="trebbia-button mt-5" href="{{ route('agenda.create', ['date' => $date->format('Y-m-d')]) }}">Crear cita</a>
-                    </div>
+                    <x-empty-state
+                        icon="calendar"
+                        title="No hay citas en este dia"
+                        body="Crea una cita manual o comparte tu enlace para empezar a recibir reservas."
+                        :action="route('agenda.create', ['date' => $date->format('Y-m-d')])"
+                        action-label="Crear cita"
+                    />
                 @endforelse
             @endif
         </section>

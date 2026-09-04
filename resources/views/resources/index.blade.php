@@ -56,19 +56,24 @@
                         </div>
                         <span class="w-fit rounded-md px-2 py-1 text-xs font-bold {{ $resource->is_active ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#64716d]' }}">{{ $resource->is_active ? 'Activo' : 'Inactivo' }}</span>
                         <div class="flex items-center gap-2 md:justify-end">
-                            <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('recursos.edit', $resource) }}">Editar</a>
-                            <form method="POST" action="{{ route('recursos.destroy', $resource) }}">
+                            <a class="trebbia-icon-button" href="{{ route('recursos.edit', $resource) }}" title="Editar recurso" aria-label="Editar recurso {{ $resource->name }}">
+                                <x-icon name="edit" class="size-4" />
+                            </a>
+                            <form method="POST" action="{{ route('recursos.destroy', $resource) }}" onsubmit="return confirm('Archivar este recurso?');">
                                 @csrf
                                 @method('DELETE')
-                                <button class="rounded-md border border-[#f0c9c4] px-3 py-2 text-sm font-bold text-[#8a3027]">Archivar</button>
+                                <button class="trebbia-icon-button trebbia-icon-button-danger" title="Archivar recurso" aria-label="Archivar recurso {{ $resource->name }}">
+                                    <x-icon name="archive" class="size-4" />
+                                </button>
                             </form>
                         </div>
                     </div>
                 @empty
-                    <div class="p-8 text-center">
-                        <p class="font-bold">No hay recursos todavia</p>
-                        <p class="mt-2 text-sm text-[#64716d]">Usa los sugeridos o crea uno personalizado para empezar mas rapido.</p>
-                    </div>
+                    <x-empty-state
+                        icon="box"
+                        title="No hay recursos todavia"
+                        body="Usa los sugeridos o crea uno personalizado para evitar cruces de salas, camillas o equipos."
+                    />
                 @endforelse
             </section>
             <div>{{ $resources->links() }}</div>
