@@ -20,6 +20,7 @@ class SettingsController extends Controller
             'business' => $business,
             'settings' => $settings,
             'whatsappAccount' => $business->whatsappAccounts()->latest()->first(),
+            'whatsappSetup' => $this->whatsappSetup($business, $settings),
             'branches' => $business->branches()->latest()->get(),
             'users' => $business->businessUsers()->with('user')->latest()->get(),
             'invitations' => $business->invitations()->where('status', 'pending')->latest()->get(),
@@ -250,6 +251,69 @@ class SettingsController extends Controller
             'status' => 'not_configured',
             'billing_model' => null,
             'billing_owner_confirmed' => false,
+        ];
+    }
+
+    private function whatsappSetup($business, $settings): array
+    {
+        $whatsapp = array_merge($this->defaultWhatsappSettings($business), $settings->whatsapp_settings ?? []);
+        $account = $business->whatsappAccounts()->latest()->first();
+        $hasToken = filled($account?->access_token);
+        $hasCloudApi = filled($account?->phone_number_id) && filled($account?->waba_id) && $hasToken;
+        $webhookConfigured = filled(config('services.whatsapp.verify_token')) && filled(config('services.whatsapp.app_secret'));
+        $billingConfirmed = (bool) ($whatsapp['billing_owner_confirmed'] ?? false);
+        $connected = $hasCloudApi && $webhookConfigured && $billingConfirmed && $account?->status === 'connected';
+
+        $steps = [
+            [
+                'title' => 'Modo demo disponible',
+                'description' => 'Usa el simulador para vender y probar reservas antes de conectar Meta.',
+                'complete' => true,
+                'action' => route('whatsapp-simulator.index'),
+                'action_label' => 'Abrir simulador',
+            ],
+            [
+                'title' => 'Cuenta Meta del negocio',
+                'description' => 'El negocio debe crear o usar su Meta Business Portfolio, WABA, numero y facturacion propios.',
+                'complete' => $billingConfirmed,
+                'action' => 'https://business.facebook.com/settings',
+                'action_label' => 'Ir a Meta Business',
+            ],
+            [
+                'title' => 'Credenciales Cloud API',
+                'description' => 'Guarda Phone Number ID, WABA ID y token de acceso del negocio.',
+                'complete' => $hasCloudApi,
+                'action' => '#whatsapp-channel',
+                'action_label' => 'Completar datos',
+            ],
+            [
+                'title' => 'Webhook TREBBIA',
+                'description' => 'Configura el callback de Meta con la URL y el verify token de TREBBIA.',
+                'complete' => $webhookConfigured,
+                'action' => 'https://developers.facebook.com/apps',
+                'action_label' => 'Ir a Meta Developers',
+            ],
+            [
+                'title' => 'Prueba real',
+                'description' => 'Cuando Meta envie el primer mensaje entrante, el estado pasara a conectado.',
+                'complete' => $connected,
+                'action' => $whatsapp['phone'] ? 'https://wa.me/'.preg_replace('/\D+/', '', $whatsapp['phone']) : null,
+                'action_label' => 'Probar WhatsApp',
+            ],
+        ];
+
+        $completed = collect($steps)->where('complete', true)->count();
+
+        return [
+            'status' => $connected ? 'Conectado' : ($hasCloudApi ? 'Listo para probar' : 'Pendiente'),
+            'completed' => $completed,
+            'total' => count($steps),
+            'percent' => (int) round(($completed / count($steps)) * 100),
+            'has_cloud_api' => $hasCloudApi,
+            'webhook_configured' => $webhookConfigured,
+            'billing_confirmed' => $billingConfirmed,
+            'last_webhook_at' => $account?->last_webhook_at,
+            'steps' => $steps,
         ];
     }
 

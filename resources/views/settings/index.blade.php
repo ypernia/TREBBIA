@@ -118,7 +118,59 @@
                 </form>
             </section>
 
-            <section class="trebbia-card p-6">
+            <section class="trebbia-card overflow-hidden">
+                <div class="border-b border-[#e7ebe7] p-6">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-sm font-bold uppercase tracking-[0.18em] text-[#64716d]">Onboarding WhatsApp</p>
+                            <h2 class="mt-1 text-2xl font-bold">Conexion Meta Cloud API</h2>
+                            <p class="mt-2 max-w-2xl text-sm text-[#64716d]">Sigue estos pasos para conectar el WhatsApp real del negocio sin que TREBBIA asuma la facturacion de mensajes de Meta.</p>
+                        </div>
+                        <div class="rounded-md border border-[#d7ddd7] bg-[#f8faf8] px-4 py-3">
+                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#64716d]">Estado</p>
+                            <p class="mt-1 text-lg font-bold text-[#245f57]">{{ $whatsappSetup['status'] }}</p>
+                            <p class="mt-1 text-sm text-[#53615d]">{{ $whatsappSetup['completed'] }} de {{ $whatsappSetup['total'] }} pasos</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 h-2 overflow-hidden rounded-full bg-[#edf2ef]">
+                        <div class="h-full rounded-full bg-[#245f57]" style="width: {{ $whatsappSetup['percent'] }}%"></div>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 p-6 lg:grid-cols-5">
+                    @foreach ($whatsappSetup['steps'] as $step)
+                        <div class="rounded-md border {{ $step['complete'] ? 'border-[#cfe4da] bg-[#f3faf7]' : 'border-[#e1e6e0] bg-white' }} p-4">
+                            <span class="inline-flex rounded-md px-2 py-1 text-xs font-bold {{ $step['complete'] ? 'bg-[#dff2eb] text-[#245f57]' : 'bg-[#f1f1ef] text-[#53615d]' }}">
+                                {{ $step['complete'] ? 'Listo' : 'Pendiente' }}
+                            </span>
+                            <h3 class="mt-3 font-bold">{{ $step['title'] }}</h3>
+                            <p class="mt-2 text-sm text-[#64716d]">{{ $step['description'] }}</p>
+                            @if ($step['action'])
+                                <a class="mt-4 inline-flex text-sm font-bold text-[#245f57] hover:underline" href="{{ $step['action'] }}" @if (str_starts_with($step['action'], 'http')) target="_blank" @endif>
+                                    {{ $step['action_label'] }}
+                                </a>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="grid gap-4 border-t border-[#e7ebe7] bg-[#fbfcfb] p-6 md:grid-cols-3">
+                    <div>
+                        <p class="text-sm font-bold text-[#18211f]">Callback URL</p>
+                        <p class="mt-2 break-all rounded-md border border-[#e1e6e0] bg-white p-3 text-sm font-semibold text-[#245f57]">{{ $webhookUrl }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-[#18211f]">Verify token</p>
+                        <p class="mt-2 rounded-md border border-[#e1e6e0] bg-white p-3 text-sm text-[#64716d]">{{ $whatsappSetup['webhook_configured'] ? 'Configurado en .env' : 'Pendiente en .env' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-[#18211f]">Ultimo webhook</p>
+                        <p class="mt-2 rounded-md border border-[#e1e6e0] bg-white p-3 text-sm text-[#64716d]">{{ $whatsappSetup['last_webhook_at'] ? $whatsappSetup['last_webhook_at']->format('d/m/Y H:i') : 'Sin mensajes reales recibidos' }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="whatsapp-channel" class="trebbia-card p-6">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-xl font-bold">Canal WhatsApp</h2>

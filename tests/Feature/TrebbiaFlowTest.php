@@ -400,6 +400,8 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Perfil del negocio')
             ->assertSee('Preferencias de agenda')
+            ->assertSee('Onboarding WhatsApp')
+            ->assertSee('Conexion Meta Cloud API')
             ->assertSee('Canal WhatsApp')
             ->assertSee('Sedes')
             ->assertSee('Usuarios y roles')
