@@ -78,11 +78,11 @@
 
             <section class="trebbia-card p-6">
                 <h2 class="text-xl font-bold">Mensajes sugeridos</h2>
-                <div class="mt-5 grid gap-4 lg:grid-cols-3">
+                <div class="mt-5 grid min-w-0 gap-4 lg:grid-cols-3">
                     @foreach ($share['messages'] as $label => $message)
-                        <div class="rounded-md border border-[#e1e6e0] bg-white p-4">
+                        <div class="flex min-w-0 flex-col rounded-md border border-[#e1e6e0] bg-white p-4">
                             <p class="text-sm font-bold uppercase tracking-[0.14em] text-[#64716d]">{{ str_replace('_', ' ', $label) }}</p>
-                            <p class="mt-3 whitespace-pre-line text-sm leading-6 text-[#53615d]">{{ $message }}</p>
+                            <p class="mt-3 min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#53615d] [overflow-wrap:anywhere]">{{ $message }}</p>
                             <button class="mt-4 text-sm font-bold text-[#245f57] hover:underline" type="button" data-copy-target="{{ $message }}">Copiar texto</button>
                         </div>
                     @endforeach
