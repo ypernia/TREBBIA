@@ -132,7 +132,7 @@ class WhatsAppBookingConversationService
                 'status' => $settings['appointment_status'] ?? 'scheduled',
                 'source_channel' => Appointment::SOURCE_WHATSAPP,
                 'source_reference' => 'conversation:'.$conversation->id,
-                'source_metadata' => ['simulated' => $settings['mode'] !== 'cloud_api'],
+                'source_metadata' => ['simulated' => ! str_starts_with($settings['mode'] ?? 'link', 'cloud_api')],
             ]);
         } catch (ValidationException) {
             return 'Ese horario dejo de estar disponible. Vuelve a consultar otra fecha u horario.';
@@ -198,7 +198,7 @@ class WhatsAppBookingConversationService
             'unavailable_message' => 'No encontre horarios disponibles para esa opcion. Probemos con otra fecha u horario.',
             'confirmation_message' => 'Listo, tu cita quedo registrada. Te esperamos.',
             'appointment_status' => 'scheduled',
-            'mode' => 'simulated',
+            'mode' => 'link',
         ], $business->settings()->firstOrCreate([])->whatsapp_settings ?? []);
     }
 }

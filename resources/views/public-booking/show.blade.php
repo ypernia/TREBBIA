@@ -30,6 +30,17 @@
             @endif
         </header>
 
+        @if ($whatsappLink)
+            <section class="mb-6 grid gap-4 rounded-md border border-[#d7ddd7] bg-white p-5 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Canal WhatsApp</p>
+                    <h2 class="mt-1 text-xl font-bold">Agenda por la web o escribe al negocio</h2>
+                    <p class="mt-2 text-sm text-[#64716d]">Puedes elegir horario aqui mismo o abrir WhatsApp con un mensaje preparado para coordinar la reserva con el equipo.</p>
+                </div>
+                <a class="trebbia-button trebbia-button-secondary w-full md:w-auto" href="{{ $whatsappLink }}" target="_blank">Abrir WhatsApp</a>
+            </section>
+        @endif
+
         @if ($errors->any())
             <div class="mb-5 rounded-md border border-[#f0c9c4] bg-[#fff4f2] px-4 py-3 text-sm font-semibold text-[#8a3027]">
                 Revisa la informacion de tu reserva.

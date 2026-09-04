@@ -15,7 +15,8 @@
         $webhookUrl = route('webhooks.meta.whatsapp.receive');
         $whatsappModeLabel = match ($whatsapp['mode'] ?? 'simulated') {
             'cloud_api_manual' => 'Meta Cloud API manual',
-            default => 'Simulador interno',
+            'simulated' => 'Modo enlace',
+            default => 'Modo enlace',
         };
     @endphp
 
@@ -71,7 +72,7 @@
                 </form>
             </section>
 
-            <section class="trebbia-card p-6">
+            <section id="agenda-preferences" class="trebbia-card p-6">
                 <h2 class="text-xl font-bold">Preferencias de agenda</h2>
                 <form method="POST" action="{{ route('settings.preferences.update') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
                     @csrf
@@ -122,9 +123,9 @@
                 <div class="border-b border-[#e7ebe7] p-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <p class="text-sm font-bold uppercase tracking-[0.18em] text-[#64716d]">Onboarding WhatsApp</p>
-                            <h2 class="mt-1 text-2xl font-bold">Conexion Meta Cloud API</h2>
-                            <p class="mt-2 max-w-2xl text-sm text-[#64716d]">Sigue estos pasos para conectar el WhatsApp real del negocio sin que TREBBIA asuma la facturacion de mensajes de Meta.</p>
+                            <p class="text-sm font-bold uppercase tracking-[0.18em] text-[#64716d]">Canal comercial WhatsApp</p>
+                            <h2 class="mt-1 text-2xl font-bold">Reservas por enlace y QR</h2>
+                            <p class="mt-2 max-w-2xl text-sm text-[#64716d]">Activa una entrada sencilla para que el cliente abra WhatsApp, escriba al negocio y reserve mientras TREBBIA mantiene la agenda ordenada.</p>
                         </div>
                         <div class="rounded-md border border-[#d7ddd7] bg-[#f8faf8] px-4 py-3">
                             <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#64716d]">Estado</p>
@@ -154,18 +155,23 @@
                     @endforeach
                 </div>
 
-                <div class="grid gap-4 border-t border-[#e7ebe7] bg-[#fbfcfb] p-6 md:grid-cols-3">
-                    <div>
-                        <p class="text-sm font-bold text-[#18211f]">Callback URL</p>
-                        <p class="mt-2 break-all rounded-md border border-[#e1e6e0] bg-white p-3 text-sm font-semibold text-[#245f57]">{{ $webhookUrl }}</p>
+                <div class="grid gap-4 border-t border-[#e7ebe7] bg-[#fbfcfb] p-6 lg:grid-cols-[1.2fr_1fr]">
+                    <div class="rounded-md border border-[#d7ddd7] bg-white p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Modo enlace</p>
+                        <h3 class="mt-2 text-lg font-bold">Listo para vender sin Meta Developers</h3>
+                        <p class="mt-2 text-sm text-[#64716d]">El cliente toca el boton o escanea el QR, abre WhatsApp con un mensaje preparado y el negocio confirma la cita apoyandose en la agenda de TREBBIA.</p>
+                        <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+                            @if ($whatsappLink)
+                                <a class="trebbia-button" href="{{ $whatsappLink }}" target="_blank">Probar WhatsApp</a>
+                            @endif
+                            <a class="trebbia-button trebbia-button-secondary" href="{{ route('public-booking.show', $business->slug) }}" target="_blank">Ver pagina publica</a>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm font-bold text-[#18211f]">Verify token</p>
-                        <p class="mt-2 rounded-md border border-[#e1e6e0] bg-white p-3 text-sm text-[#64716d]">{{ $whatsappSetup['webhook_configured'] ? 'Configurado en .env' : 'Pendiente en .env' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-bold text-[#18211f]">Ultimo webhook</p>
-                        <p class="mt-2 rounded-md border border-[#e1e6e0] bg-white p-3 text-sm text-[#64716d]">{{ $whatsappSetup['last_webhook_at'] ? $whatsappSetup['last_webhook_at']->format('d/m/Y H:i') : 'Sin mensajes reales recibidos' }}</p>
+                    <div id="assisted-activation" class="rounded-md border border-[#e1e6e0] bg-white p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Modo automatico</p>
+                        <h3 class="mt-2 text-lg font-bold">Activacion asistida</h3>
+                        <p class="mt-2 text-sm text-[#64716d]">Para respuestas automaticas reales, TREBBIA acompana la configuracion de Meta Cloud API con la cuenta, numero y facturacion del negocio.</p>
+                        <p class="mt-4 rounded-md bg-[#f1f4f1] px-3 py-2 text-sm font-bold text-[#53615d]">Estado: {{ $whatsappSetup['has_cloud_api'] ? 'Credenciales guardadas' : 'No iniciado' }}</p>
                     </div>
                 </div>
             </section>
@@ -174,7 +180,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-xl font-bold">Canal WhatsApp</h2>
-                        <p class="mt-1 text-sm text-[#64716d]">Configura el punto de entrada para que tus clientes inicien reservas por WhatsApp. Modo actual: {{ $whatsappModeLabel }}.</p>
+                        <p class="mt-1 text-sm text-[#64716d]">Configura el numero, el mensaje inicial, el enlace y el QR que vera el cliente. Modo actual: {{ $whatsappModeLabel }}.</p>
                     </div>
                     <span class="w-fit rounded-md px-3 py-2 text-xs font-bold {{ ($whatsapp['enabled'] ?? false) ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#53615d]' }}">
                         {{ ($whatsapp['enabled'] ?? false) ? 'Activo' : 'Inactivo' }}
@@ -209,27 +215,32 @@
                         <label class="trebbia-label" for="entry_message">Mensaje inicial del enlace</label>
                         <input class="trebbia-input" id="entry_message" name="entry_message" value="{{ old('entry_message', $whatsapp['entry_message'] ?? '') }}" required>
                     </div>
-                    <div>
-                        <label class="trebbia-label" for="phone_number_id">Meta phone number ID</label>
-                        <input class="trebbia-input" id="phone_number_id" name="phone_number_id" value="{{ old('phone_number_id', $whatsappAccount?->phone_number_id) }}" placeholder="Ej: 123456789012345">
-                    </div>
-                    <div>
-                        <label class="trebbia-label" for="waba_id">WhatsApp Business Account ID</label>
-                        <input class="trebbia-input" id="waba_id" name="waba_id" value="{{ old('waba_id', $whatsappAccount?->waba_id) }}" placeholder="Ej: 987654321098765">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="trebbia-label" for="access_token">Token de acceso Cloud API</label>
-                        <input class="trebbia-input" id="access_token" name="access_token" type="password" autocomplete="new-password" placeholder="{{ $whatsappAccount?->access_token ? 'Token guardado cifrado. Escribe uno nuevo solo si deseas reemplazarlo.' : 'Pega aqui el token permanente o temporal de Meta' }}">
-                    </div>
-                    <div class="sm:col-span-2 rounded-md border border-[#bcd7df] bg-[#f1fbfd] p-4 text-sm text-[#33535b]">
-                        <p class="font-bold text-[#12343b]">Facturacion Meta por negocio</p>
-                        <p class="mt-1">Usa aqui la WABA, el numero de WhatsApp Business y el metodo de pago del negocio conectado. TREBBIA solo cobra su membresia SaaS y servicios propios.</p>
-                    </div>
-                    <label class="flex items-start gap-2 rounded-md border border-[#d7ddd7] bg-white p-4 text-sm font-semibold text-[#53615d] sm:col-span-2">
-                        <input type="hidden" name="billing_owner_confirmed" value="0">
-                        <input class="mt-1" type="checkbox" name="billing_owner_confirmed" value="1" @checked(old('billing_owner_confirmed', $whatsapp['billing_owner_confirmed'] ?? false))>
-                        <span>Confirmo que la WABA, el numero de WhatsApp Business y la configuracion de facturacion pertenecen a este negocio.</span>
-                    </label>
+                    <details class="sm:col-span-2 rounded-md border border-[#e1e6e0] bg-[#fbfcfb] p-4">
+                        <summary class="cursor-pointer text-sm font-bold text-[#245f57]">Activacion automatica asistida con Meta Cloud API</summary>
+                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                            <div class="sm:col-span-2 rounded-md border border-[#bcd7df] bg-[#f1fbfd] p-4 text-sm text-[#33535b]">
+                                <p class="font-bold text-[#12343b]">Solo para planes con acompanamiento</p>
+                                <p class="mt-1">Estos datos se completan cuando TREBBIA acompane al negocio en Meta. La WABA, el numero y la facturacion deben pertenecer al negocio.</p>
+                            </div>
+                            <div>
+                                <label class="trebbia-label" for="phone_number_id">Meta phone number ID</label>
+                                <input class="trebbia-input" id="phone_number_id" name="phone_number_id" value="{{ old('phone_number_id', $whatsappAccount?->phone_number_id) }}" placeholder="Ej: 123456789012345">
+                            </div>
+                            <div>
+                                <label class="trebbia-label" for="waba_id">WhatsApp Business Account ID</label>
+                                <input class="trebbia-input" id="waba_id" name="waba_id" value="{{ old('waba_id', $whatsappAccount?->waba_id) }}" placeholder="Ej: 987654321098765">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="trebbia-label" for="access_token">Token de acceso Cloud API</label>
+                                <input class="trebbia-input" id="access_token" name="access_token" type="password" autocomplete="new-password" placeholder="{{ $whatsappAccount?->access_token ? 'Token guardado cifrado. Escribe uno nuevo solo si deseas reemplazarlo.' : 'Se completa durante la activacion asistida' }}">
+                            </div>
+                            <label class="flex items-start gap-2 rounded-md border border-[#d7ddd7] bg-white p-4 text-sm font-semibold text-[#53615d] sm:col-span-2">
+                                <input type="hidden" name="billing_owner_confirmed" value="0">
+                                <input class="mt-1" type="checkbox" name="billing_owner_confirmed" value="1" @checked(old('billing_owner_confirmed', $whatsapp['billing_owner_confirmed'] ?? false))>
+                                <span>Confirmo que la WABA, el numero de WhatsApp Business y la configuracion de facturacion pertenecen a este negocio.</span>
+                            </label>
+                        </div>
+                    </details>
                     <div class="sm:col-span-2">
                         <label class="trebbia-label" for="welcome_message">Mensaje de bienvenida</label>
                         <textarea class="trebbia-input min-h-24" id="welcome_message" name="welcome_message" required>{{ old('welcome_message', $whatsapp['welcome_message'] ?? '') }}</textarea>
@@ -441,10 +452,8 @@
                     <p><span class="font-bold text-[#18211f]">Estado:</span> {{ ($whatsapp['enabled'] ?? false) ? 'Activa' : 'Inactiva' }}</p>
                     <p><span class="font-bold text-[#18211f]">Numero:</span> {{ $whatsappPhone ?: 'Sin configurar' }}</p>
                     <p><span class="font-bold text-[#18211f]">Modo:</span> {{ $whatsappModeLabel }}</p>
-                    <p><span class="font-bold text-[#18211f]">Meta:</span> {{ $whatsappAccount?->status ?: 'Sin conectar' }}</p>
-                    <p><span class="font-bold text-[#18211f]">Facturacion:</span> {{ ($whatsapp['billing_model'] ?? null) === 'business_owned' ? 'Del negocio' : 'No configurada' }}</p>
-                    <p><span class="font-bold text-[#18211f]">Webhook:</span></p>
-                    <p class="break-all rounded-md border border-[#e1e6e0] bg-white p-3 font-semibold text-[#245f57]">{{ $webhookUrl }}</p>
+                    <p><span class="font-bold text-[#18211f]">Automatico:</span> {{ $whatsappAccount?->status ?: 'Disponible con activacion asistida' }}</p>
+                    <p><span class="font-bold text-[#18211f]">Facturacion Meta:</span> {{ ($whatsapp['billing_model'] ?? null) === 'business_owned' ? 'Del negocio' : 'No aplica en modo enlace' }}</p>
                     @if ($whatsappLink)
                         <a class="break-all font-bold text-[#245f57] hover:underline" href="{{ $whatsappLink }}" target="_blank">{{ $whatsappLink }}</a>
                         <div class="rounded-md border border-[#e1e6e0] bg-white p-3">

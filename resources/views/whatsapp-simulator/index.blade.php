@@ -34,7 +34,7 @@
                     <div>
                         <h2 class="text-xl font-bold">Chat de prueba</h2>
                         <p class="mt-1 text-sm text-[#64716d]">Prueba frases como "quiero agendar", el nombre de un servicio, un profesional, una fecha y un horario.</p>
-                        <p class="mt-2 text-xs font-bold text-[#245f57]">Canal: {{ $channelStatus }} · {{ ($whatsappSettings['enabled'] ?? false) ? 'Reservas por WhatsApp activas' : 'Reservas por WhatsApp inactivas' }}</p>
+                        <p class="mt-2 text-xs font-bold text-[#245f57]">Canal: {{ $channelStatus }} / {{ ($whatsappSettings['enabled'] ?? false) ? 'Reservas por WhatsApp activas' : 'Reservas por WhatsApp inactivas' }}</p>
                     </div>
                     @if ($conversation)
                         <form method="POST" action="{{ route('whatsapp-simulator.reset', $conversation) }}">
@@ -83,7 +83,7 @@
                             <div class="max-w-[min(34rem,85%)] rounded-lg px-4 py-3 shadow-sm {{ $message->direction === 'outbound' ? 'bg-[#245f57] text-white' : 'border border-[#e1e6e0] bg-white text-[#18211f]' }}">
                                 <p class="whitespace-pre-line text-sm leading-6">{{ $message->body }}</p>
                                 <p class="mt-2 text-[11px] font-semibold opacity-70">
-                                    {{ $message->direction === 'outbound' ? 'TREBBIA' : 'Cliente' }} · {{ $message->created_at->format('d/m H:i') }}
+                                    {{ $message->direction === 'outbound' ? 'TREBBIA' : 'Cliente' }} / {{ $message->created_at->format('d/m H:i') }}
                                 </p>
                             </div>
                         </div>

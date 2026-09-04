@@ -123,8 +123,8 @@ class SettingsController extends Controller
             'unavailable_message' => $attributes['unavailable_message'],
             'confirmation_message' => $attributes['confirmation_message'],
             'appointment_status' => $attributes['appointment_status'],
-            'mode' => $cloudApiConfigured ? 'cloud_api_manual' : 'simulated',
-            'status' => $request->boolean('enabled') ? ($cloudApiConfigured ? 'configured' : 'simulated') : 'disabled',
+            'mode' => $cloudApiConfigured ? 'cloud_api_manual' : 'link',
+            'status' => $request->boolean('enabled') ? ($cloudApiConfigured ? 'configured' : 'link_ready') : 'disabled',
             'billing_model' => $cloudApiConfigured ? 'business_owned' : null,
             'billing_owner_confirmed' => $cloudApiConfigured && $request->boolean('billing_owner_confirmed'),
         ]);
@@ -247,7 +247,7 @@ class SettingsController extends Controller
             'unavailable_message' => 'No encontre horarios disponibles para esa opcion. Probemos con otra fecha u horario.',
             'confirmation_message' => 'Listo, tu cita quedo registrada. Te esperamos.',
             'appointment_status' => 'scheduled',
-            'mode' => 'simulated',
+            'mode' => 'link',
             'status' => 'not_configured',
             'billing_model' => null,
             'billing_owner_confirmed' => false,
@@ -258,6 +258,9 @@ class SettingsController extends Controller
     {
         $whatsapp = array_merge($this->defaultWhatsappSettings($business), $settings->whatsapp_settings ?? []);
         $account = $business->whatsappAccounts()->latest()->first();
+        $phone = preg_replace('/\D+/', '', $whatsapp['phone'] ?? '');
+        $linkReady = (bool) ($whatsapp['enabled'] ?? false) && filled($phone);
+        $publicBooking = $settings->public_booking_settings ?? [];
         $hasToken = filled($account?->access_token);
         $hasCloudApi = filled($account?->phone_number_id) && filled($account?->waba_id) && $hasToken;
         $webhookConfigured = filled(config('services.whatsapp.verify_token')) && filled(config('services.whatsapp.app_secret'));
@@ -266,49 +269,50 @@ class SettingsController extends Controller
 
         $steps = [
             [
-                'title' => 'Modo demo disponible',
-                'description' => 'Usa el simulador para vender y probar reservas antes de conectar Meta.',
+                'title' => 'Reservas publicas',
+                'description' => 'Activa la pagina publica para que el cliente pueda elegir servicio, profesional y horario.',
+                'complete' => (bool) ($publicBooking['allow_public_booking'] ?? false),
+                'action' => route('settings.index').'#agenda-preferences',
+                'action_label' => 'Activar reservas',
+            ],
+            [
+                'title' => 'Numero WhatsApp',
+                'description' => 'Guarda el numero real del negocio para generar el enlace y el QR de reservas.',
+                'complete' => filled($phone),
+                'action' => '#whatsapp-channel',
+                'action_label' => 'Configurar numero',
+            ],
+            [
+                'title' => 'Modo enlace listo',
+                'description' => 'El cliente abre WhatsApp con un mensaje preparado y el negocio conserva el control de agenda en TREBBIA.',
+                'complete' => $linkReady,
+                'action' => $linkReady ? 'https://wa.me/'.$phone.'?text='.rawurlencode($whatsapp['entry_message'] ?? 'Hola, quiero agendar una cita') : '#whatsapp-channel',
+                'action_label' => $linkReady ? 'Probar enlace' : 'Completar canal',
+            ],
+            [
+                'title' => 'Demo comercial',
+                'description' => 'Usa el simulador para mostrar como TREBBIA convierte una conversacion en una cita.',
                 'complete' => true,
                 'action' => route('whatsapp-simulator.index'),
                 'action_label' => 'Abrir simulador',
             ],
             [
-                'title' => 'Cuenta Meta del negocio',
-                'description' => 'El negocio debe crear o usar su Meta Business Portfolio, WABA, numero y facturacion propios.',
-                'complete' => $billingConfirmed,
-                'action' => 'https://business.facebook.com/settings',
-                'action_label' => 'Ir a Meta Business',
-            ],
-            [
-                'title' => 'Credenciales Cloud API',
-                'description' => 'Guarda Phone Number ID, WABA ID y token de acceso del negocio.',
-                'complete' => $hasCloudApi,
-                'action' => '#whatsapp-channel',
-                'action_label' => 'Completar datos',
-            ],
-            [
-                'title' => 'Webhook TREBBIA',
-                'description' => 'Configura el callback de Meta con la URL y el verify token de TREBBIA.',
-                'complete' => $webhookConfigured,
-                'action' => 'https://developers.facebook.com/apps',
-                'action_label' => 'Ir a Meta Developers',
-            ],
-            [
-                'title' => 'Prueba real',
-                'description' => 'Cuando Meta envie el primer mensaje entrante, el estado pasara a conectado.',
+                'title' => 'Automatizacion asistida',
+                'description' => 'Cuando el negocio quiera respuestas automaticas reales, TREBBIA acompana la activacion de Meta Cloud API.',
                 'complete' => $connected,
-                'action' => $whatsapp['phone'] ? 'https://wa.me/'.preg_replace('/\D+/', '', $whatsapp['phone']) : null,
-                'action_label' => 'Probar WhatsApp',
+                'action' => '#assisted-activation',
+                'action_label' => 'Ver estado',
             ],
         ];
 
         $completed = collect($steps)->where('complete', true)->count();
 
         return [
-            'status' => $connected ? 'Conectado' : ($hasCloudApi ? 'Listo para probar' : 'Pendiente'),
+            'status' => $connected ? 'Automatico conectado' : ($linkReady ? 'Modo enlace activo' : 'Pendiente'),
             'completed' => $completed,
             'total' => count($steps),
             'percent' => (int) round(($completed / count($steps)) * 100),
+            'link_ready' => $linkReady,
             'has_cloud_api' => $hasCloudApi,
             'webhook_configured' => $webhookConfigured,
             'billing_confirmed' => $billingConfirmed,
