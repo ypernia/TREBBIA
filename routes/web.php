@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('/configuracion/negocio', [SettingsController::class, 'updateBusiness'])->name('settings.business.update');
         Route::put('/configuracion/preferencias', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
+        Route::put('/configuracion/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('settings.whatsapp.update');
         Route::post('/configuracion/sedes', [SettingsController::class, 'storeBranch'])->name('settings.branches.store');
         Route::put('/configuracion/sedes/{branch}', [SettingsController::class, 'updateBranch'])->name('settings.branches.update');
         Route::post('/configuracion/equipo/invitaciones', [TeamController::class, 'invite'])->name('team.invitations.store');

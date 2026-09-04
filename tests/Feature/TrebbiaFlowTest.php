@@ -398,9 +398,37 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Perfil del negocio')
             ->assertSee('Preferencias de agenda')
+            ->assertSee('Canal WhatsApp')
             ->assertSee('Sedes')
             ->assertSee('Usuarios y roles')
             ->assertSee($user->email);
+    }
+
+    public function test_whatsapp_channel_settings_can_be_updated(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('settings.whatsapp.update'), [
+                'enabled' => 1,
+                'phone' => '+57 311 330 2090',
+                'display_name' => 'TREBBIA Salud',
+                'entry_message' => 'Hola, quiero agendar una cita',
+                'welcome_message' => 'Bienvenido a TREBBIA Salud.',
+                'unavailable_message' => 'No hay horarios para esa opcion.',
+                'confirmation_message' => 'Tu cita quedo lista.',
+                'appointment_status' => 'confirmed',
+            ])
+            ->assertRedirect(route('settings.index'));
+
+        $business->refresh();
+        $settings = $business->settings()->firstOrFail()->whatsapp_settings;
+
+        $this->assertTrue($settings['enabled']);
+        $this->assertSame('573113302090', $settings['phone']);
+        $this->assertSame('confirmed', $settings['appointment_status']);
+        $this->assertSame('simulated', $settings['status']);
     }
 
     public function test_team_invitation_creates_pending_invitation_for_new_email(): void
@@ -995,6 +1023,25 @@ class TrebbiaFlowTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_public_booking_page_shows_whatsapp_entry_point_when_enabled(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'public_booking_settings' => ['allow_public_booking' => true],
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573113302090',
+                'entry_message' => 'Hola, quiero agendar una cita',
+            ],
+        ]);
+
+        $this->get(route('public-booking.show', $business->slug))
+            ->assertOk()
+            ->assertSee('Reservar por WhatsApp')
+            ->assertSee('https://wa.me/573113302090', false);
+    }
+
     public function test_public_booking_creates_client_and_appointment(): void
     {
         [, $business] = $this->tenantUser();
@@ -1231,6 +1278,12 @@ class TrebbiaFlowTest extends TestCase
         $business->settings()->firstOrCreate([])->update([
             'slot_interval_minutes' => 30,
             'booking_notice_minutes' => 0,
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573001112233',
+                'confirmation_message' => 'Tu cita quedo confirmada.',
+                'appointment_status' => 'confirmed',
+            ],
         ]);
         $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
@@ -1252,6 +1305,7 @@ class TrebbiaFlowTest extends TestCase
             'professional_id' => $professional->id,
             'starts_at' => '2026-09-07 09:00:00',
             'source_channel' => Appointment::SOURCE_WHATSAPP,
+            'status' => 'confirmed',
         ]);
     }
 

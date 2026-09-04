@@ -8,6 +8,10 @@
     @php
         $publicBooking = $settings->public_booking_settings ?? [];
         $notifications = $settings->notification_preferences ?? [];
+        $whatsapp = array_merge($whatsappDefaults, $settings->whatsapp_settings ?? []);
+        $whatsappPhone = preg_replace('/\D+/', '', $whatsapp['phone'] ?? '');
+        $whatsappLink = $whatsappPhone ? 'https://wa.me/'.$whatsappPhone.'?text='.rawurlencode($whatsapp['entry_message'] ?? '') : null;
+        $whatsappQr = $whatsappLink ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.rawurlencode($whatsappLink) : null;
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -105,6 +109,67 @@
                     </label>
                     <div class="sm:col-span-2">
                         <button class="trebbia-button">Guardar preferencias</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="trebbia-card p-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold">Canal WhatsApp</h2>
+                        <p class="mt-1 text-sm text-[#64716d]">Configura el punto de entrada para que tus clientes inicien reservas por WhatsApp. Modo actual: simulador interno.</p>
+                    </div>
+                    <span class="w-fit rounded-md px-3 py-2 text-xs font-bold {{ ($whatsapp['enabled'] ?? false) ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#53615d]' }}">
+                        {{ ($whatsapp['enabled'] ?? false) ? 'Activo' : 'Inactivo' }}
+                    </span>
+                </div>
+
+                <form method="POST" action="{{ route('settings.whatsapp.update') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
+                    @csrf
+                    @method('PUT')
+                    <label class="flex items-center gap-2 rounded-md border border-[#d7ddd7] bg-white p-4 text-sm font-semibold text-[#53615d] sm:col-span-2">
+                        <input type="hidden" name="enabled" value="0">
+                        <input type="checkbox" name="enabled" value="1" @checked(old('enabled', $whatsapp['enabled'] ?? false))>
+                        Activar reservas por WhatsApp
+                    </label>
+                    <div>
+                        <label class="trebbia-label" for="whatsapp_phone">Numero WhatsApp del negocio</label>
+                        <input class="trebbia-input" id="whatsapp_phone" name="phone" value="{{ old('phone', $whatsapp['phone'] ?? '') }}" placeholder="573113302090">
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="whatsapp_display_name">Nombre visible</label>
+                        <input class="trebbia-input" id="whatsapp_display_name" name="display_name" value="{{ old('display_name', $whatsapp['display_name'] ?? $business->name) }}">
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="appointment_status">Estado de cita creada por WhatsApp</label>
+                        <select class="trebbia-input" id="appointment_status" name="appointment_status" required>
+                            @foreach ($appointmentStatusOptions as $value => $label)
+                                <option value="{{ $value }}" @selected(old('appointment_status', $whatsapp['appointment_status'] ?? 'scheduled') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="entry_message">Mensaje inicial del enlace</label>
+                        <input class="trebbia-input" id="entry_message" name="entry_message" value="{{ old('entry_message', $whatsapp['entry_message'] ?? '') }}" required>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="trebbia-label" for="welcome_message">Mensaje de bienvenida</label>
+                        <textarea class="trebbia-input min-h-24" id="welcome_message" name="welcome_message" required>{{ old('welcome_message', $whatsapp['welcome_message'] ?? '') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="unavailable_message">Mensaje sin disponibilidad</label>
+                        <textarea class="trebbia-input min-h-24" id="unavailable_message" name="unavailable_message" required>{{ old('unavailable_message', $whatsapp['unavailable_message'] ?? '') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="confirmation_message">Mensaje de confirmacion</label>
+                        <textarea class="trebbia-input min-h-24" id="confirmation_message" name="confirmation_message" required>{{ old('confirmation_message', $whatsapp['confirmation_message'] ?? '') }}</textarea>
+                    </div>
+                    <div class="sm:col-span-2 flex flex-col gap-3 sm:flex-row">
+                        <button class="trebbia-button">Guardar WhatsApp</button>
+                        <a class="trebbia-button trebbia-button-secondary" href="{{ route('whatsapp-simulator.index') }}">Abrir simulador</a>
+                        @if ($whatsappLink)
+                            <a class="trebbia-button trebbia-button-secondary" href="{{ $whatsappLink }}" target="_blank">Probar enlace</a>
+                        @endif
                     </div>
                 </form>
             </section>
@@ -289,6 +354,22 @@
                     <a class="break-all font-bold text-[#245f57] hover:underline" href="{{ route('public-booking.show', $business->slug) }}" target="_blank">
                         {{ route('public-booking.show', $business->slug) }}
                     </a>
+                </div>
+            </section>
+
+            <section class="trebbia-card p-5">
+                <h2 class="text-lg font-bold">Entrada por WhatsApp</h2>
+                <div class="mt-4 space-y-4 text-sm text-[#53615d]">
+                    <p><span class="font-bold text-[#18211f]">Estado:</span> {{ ($whatsapp['enabled'] ?? false) ? 'Activa' : 'Inactiva' }}</p>
+                    <p><span class="font-bold text-[#18211f]">Numero:</span> {{ $whatsappPhone ?: 'Sin configurar' }}</p>
+                    @if ($whatsappLink)
+                        <a class="break-all font-bold text-[#245f57] hover:underline" href="{{ $whatsappLink }}" target="_blank">{{ $whatsappLink }}</a>
+                        <div class="rounded-md border border-[#e1e6e0] bg-white p-3">
+                            <img class="mx-auto h-40 w-40" src="{{ $whatsappQr }}" alt="QR WhatsApp {{ $business->name }}">
+                        </div>
+                    @else
+                        <p class="rounded-md border border-dashed border-[#cfd8d2] p-3">Agrega un numero para generar enlace y QR.</p>
+                    @endif
                 </div>
             </section>
 

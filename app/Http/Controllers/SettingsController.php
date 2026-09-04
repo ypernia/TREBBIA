@@ -35,6 +35,11 @@ class SettingsController extends Controller
                 1440 => '1 dia',
                 2880 => '2 dias',
             ],
+            'whatsappDefaults' => $this->defaultWhatsappSettings($business),
+            'appointmentStatusOptions' => [
+                'scheduled' => 'Programada',
+                'confirmed' => 'Confirmada',
+            ],
         ]);
     }
 
@@ -44,7 +49,7 @@ class SettingsController extends Controller
             'name' => ['required', 'string', 'max:160'],
             'industry' => ['nullable', 'string', 'max:120'],
             'email' => ['nullable', 'email', 'max:180'],
-            'phone' => ['nullable', 'string', 'max:60'],
+            'phone' => ['required_if:enabled,1', 'nullable', 'string', 'max:60'],
             'timezone' => ['required', Rule::in(array_keys($this->timezones()))],
             'currency' => ['required', Rule::in(array_keys($this->currencies()))],
         ]);
@@ -79,6 +84,38 @@ class SettingsController extends Controller
         ]);
 
         return redirect()->route('settings.index')->with('status', 'Preferencias actualizadas.');
+    }
+
+    public function updateWhatsapp(Request $request): RedirectResponse
+    {
+        $business = app('activeBusiness');
+        $attributes = $request->validate([
+            'enabled' => ['nullable', 'boolean'],
+            'phone' => ['nullable', 'string', 'max:60'],
+            'display_name' => ['nullable', 'string', 'max:140'],
+            'entry_message' => ['required', 'string', 'max:240'],
+            'welcome_message' => ['required', 'string', 'max:500'],
+            'unavailable_message' => ['required', 'string', 'max:500'],
+            'confirmation_message' => ['required', 'string', 'max:500'],
+            'appointment_status' => ['required', Rule::in(['scheduled', 'confirmed'])],
+        ]);
+
+        $settings = array_merge($this->defaultWhatsappSettings($business), [
+            'enabled' => $request->boolean('enabled'),
+            'phone' => $this->normalizeWhatsappPhone($attributes['phone'] ?? ''),
+            'display_name' => $attributes['display_name'] ?: $business->name,
+            'entry_message' => $attributes['entry_message'],
+            'welcome_message' => $attributes['welcome_message'],
+            'unavailable_message' => $attributes['unavailable_message'],
+            'confirmation_message' => $attributes['confirmation_message'],
+            'appointment_status' => $attributes['appointment_status'],
+            'mode' => 'simulated',
+            'status' => $request->boolean('enabled') ? 'simulated' : 'disabled',
+        ]);
+
+        $business->settings()->firstOrCreate([])->update(['whatsapp_settings' => $settings]);
+
+        return redirect()->route('settings.index')->with('status', 'Canal WhatsApp actualizado.');
     }
 
     public function storeBranch(Request $request): RedirectResponse
@@ -150,5 +187,26 @@ class SettingsController extends Controller
             'CLP' => 'CLP',
             'EUR' => 'EUR',
         ];
+    }
+
+    private function defaultWhatsappSettings($business): array
+    {
+        return [
+            'enabled' => false,
+            'phone' => $this->normalizeWhatsappPhone($business->phone ?? ''),
+            'display_name' => $business->name,
+            'entry_message' => 'Hola, quiero agendar una cita',
+            'welcome_message' => 'Hola, soy el asistente de reservas de '.$business->name.'. Te ayudo a encontrar un horario disponible.',
+            'unavailable_message' => 'No encontre horarios disponibles para esa opcion. Probemos con otra fecha u horario.',
+            'confirmation_message' => 'Listo, tu cita quedo registrada. Te esperamos.',
+            'appointment_status' => 'scheduled',
+            'mode' => 'simulated',
+            'status' => 'not_configured',
+        ];
+    }
+
+    private function normalizeWhatsappPhone(string $value): string
+    {
+        return preg_replace('/\D+/', '', $value) ?: '';
     }
 }

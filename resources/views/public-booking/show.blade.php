@@ -11,11 +11,23 @@
     @endif
 </head>
 <body class="min-h-screen bg-[#f6f7f4] font-sans text-[#18211f] antialiased">
+    @php
+        $whatsapp = $settings->whatsapp_settings ?? [];
+        $whatsappPhone = preg_replace('/\D+/', '', $whatsapp['phone'] ?? '');
+        $whatsappLink = ($whatsapp['enabled'] ?? false) && $whatsappPhone
+            ? 'https://wa.me/'.$whatsappPhone.'?text='.rawurlencode($whatsapp['entry_message'] ?? 'Hola, quiero agendar una cita')
+            : null;
+    @endphp
     <main class="mx-auto min-h-screen max-w-5xl px-5 py-8 sm:px-8">
-        <header class="mb-6 flex flex-col gap-2 border-b border-[#e1e6e0] pb-6">
-            <p class="text-sm font-semibold text-[#64716d]">Reserva online</p>
-            <h1 class="text-3xl font-bold">{{ $business->name }}</h1>
-            <p class="max-w-2xl text-[#64716d]">{{ $business->industry ?: 'Agenda tu cita en linea' }}</p>
+        <header class="mb-6 flex flex-col gap-4 border-b border-[#e1e6e0] pb-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold text-[#64716d]">Reserva online</p>
+                <h1 class="text-3xl font-bold">{{ $business->name }}</h1>
+                <p class="mt-2 max-w-2xl text-[#64716d]">{{ $business->industry ?: 'Agenda tu cita en linea' }}</p>
+            </div>
+            @if ($whatsappLink)
+                <a class="trebbia-button w-full sm:w-auto" href="{{ $whatsappLink }}" target="_blank">Reservar por WhatsApp</a>
+            @endif
         </header>
 
         @if ($errors->any())
@@ -115,6 +127,9 @@
                     <div class="mt-4 space-y-3 text-sm text-[#53615d]">
                         <p>{{ $business->email ?: 'Sin correo publico' }}</p>
                         <p>{{ $business->phone ?: 'Sin telefono publico' }}</p>
+                        @if ($whatsappLink)
+                            <a class="inline-flex font-bold text-[#245f57] hover:underline" href="{{ $whatsappLink }}" target="_blank">Abrir WhatsApp</a>
+                        @endif
                     </div>
                 </section>
             </aside>

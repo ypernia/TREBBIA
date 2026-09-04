@@ -26,9 +26,13 @@ class WhatsAppSimulatorController extends Controller
     {
         $business = app('activeBusiness');
         $conversation = $this->selectedConversation($request);
+        $settings = $business->settings()->firstOrCreate([]);
+        $whatsappSettings = $this->whatsappSettings($business);
 
         return view('whatsapp-simulator.index', [
             'business' => $business,
+            'whatsappSettings' => $whatsappSettings,
+            'configuredPhone' => $this->normalizePhone($whatsappSettings['phone'] ?? ''),
             'conversations' => $business->conversations()
                 ->with(['whatsappContact', 'state'])
                 ->latest('last_message_at')
@@ -40,6 +44,7 @@ class WhatsAppSimulatorController extends Controller
                 ? $conversation->messages()->oldest()->get()
                 : collect(),
             'state' => $conversation?->state,
+            'channelStatus' => ($settings->whatsapp_settings['status'] ?? 'not_configured'),
         ]);
     }
 
@@ -116,8 +121,10 @@ class WhatsAppSimulatorController extends Controller
             return 'Listo. Reinicie el flujo. Escribe "quiero agendar" para iniciar una reserva.';
         }
 
+        $whatsappSettings = $this->whatsappSettings($business);
+
         if ($state === 'idle' && ($parsed['intent'] ?? null) !== 'booking') {
-            return 'Hola, soy el simulador de WhatsApp de TREBBIA. Puedes escribir "quiero agendar" para probar una reserva.';
+            return $whatsappSettings['welcome_message'].' Puedes escribir "quiero agendar" para probar una reserva.';
         }
 
         $data = $this->mergeBookingData($data, $parsed);
@@ -173,7 +180,7 @@ class WhatsAppSimulatorController extends Controller
         if ($slots === []) {
             $this->setConversationState($conversation, 'booking', 'awaiting_date', $data);
 
-            return 'No encontre horarios disponibles para esa fecha. Prueba con otro dia.';
+            return $whatsappSettings['unavailable_message'];
         }
 
         $data['slots'] = $slots;
@@ -212,7 +219,7 @@ class WhatsAppSimulatorController extends Controller
                 'service_id' => $data['service_id'],
                 'professional_id' => $data['professional_id'],
                 'starts_at' => $startsAt,
-                'status' => 'scheduled',
+                'status' => $this->whatsappSettings($business)['appointment_status'] ?? 'scheduled',
                 'source_channel' => Appointment::SOURCE_WHATSAPP,
                 'source_reference' => 'conversation:'.$conversation->id,
                 'source_metadata' => ['simulated' => true],
@@ -230,7 +237,7 @@ class WhatsAppSimulatorController extends Controller
             'appointment_id' => $appointment->id,
         ]);
 
-        return "Listo. Tu cita quedo registrada.\n\nServicio: {$appointment->service->name}\nFecha: ".$appointment->starts_at->format('d/m/Y')."\nHora: ".$appointment->starts_at->format('H:i')."\nProfesional: {$appointment->professional->name}";
+        return $this->whatsappSettings($business)['confirmation_message']."\n\nServicio: {$appointment->service->name}\nFecha: ".$appointment->starts_at->format('d/m/Y')."\nHora: ".$appointment->starts_at->format('H:i')."\nProfesional: {$appointment->professional->name}";
     }
 
     private function setConversationState(Conversation $conversation, ?string $intent, string $step, array $data = []): void
@@ -273,6 +280,20 @@ class WhatsAppSimulatorController extends Controller
 
     private function normalizePhone(string $value): string
     {
-        return preg_replace('/[^\d+]/', '', $value) ?: $value;
+        return preg_replace('/\D+/', '', $value) ?: $value;
+    }
+
+    private function whatsappSettings($business): array
+    {
+        return array_merge([
+            'enabled' => false,
+            'phone' => $business->phone ?? '',
+            'display_name' => $business->name,
+            'entry_message' => 'Hola, quiero agendar una cita',
+            'welcome_message' => 'Hola, soy el asistente de reservas de '.$business->name.'. Te ayudo a encontrar un horario disponible.',
+            'unavailable_message' => 'No encontre horarios disponibles para esa opcion. Probemos con otra fecha u horario.',
+            'confirmation_message' => 'Listo, tu cita quedo registrada. Te esperamos.',
+            'appointment_status' => 'scheduled',
+        ], $business->settings()->firstOrCreate([])->whatsapp_settings ?? []);
     }
 }

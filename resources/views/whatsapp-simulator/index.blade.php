@@ -34,6 +34,7 @@
                     <div>
                         <h2 class="text-xl font-bold">Chat de prueba</h2>
                         <p class="mt-1 text-sm text-[#64716d]">Prueba frases como "quiero agendar", el nombre de un servicio, un profesional, una fecha y un horario.</p>
+                        <p class="mt-2 text-xs font-bold text-[#245f57]">Canal: {{ $channelStatus }} · {{ ($whatsappSettings['enabled'] ?? false) ? 'Reservas por WhatsApp activas' : 'Reservas por WhatsApp inactivas' }}</p>
                     </div>
                     @if ($conversation)
                         <form method="POST" action="{{ route('whatsapp-simulator.reset', $conversation) }}">
@@ -47,7 +48,7 @@
                     @csrf
                     <div>
                         <label class="trebbia-label" for="phone">Telefono</label>
-                        <input class="trebbia-input" id="phone" name="phone" value="{{ old('phone', $conversation?->whatsappContact?->phone ?? '573001112233') }}" required>
+                        <input class="trebbia-input" id="phone" name="phone" value="{{ old('phone', $conversation?->whatsappContact?->phone ?? $configuredPhone ?: '573001112233') }}" required>
                     </div>
                     <div>
                         <label class="trebbia-label" for="name">Nombre</label>

@@ -12,6 +12,7 @@ class BusinessSettings extends Model
         'booking_notice_minutes',
         'notification_preferences',
         'public_booking_settings',
+        'whatsapp_settings',
     ];
 
     protected function casts(): array
@@ -19,6 +20,7 @@ class BusinessSettings extends Model
         return [
             'notification_preferences' => 'array',
             'public_booking_settings' => 'array',
+            'whatsapp_settings' => 'array',
         ];
     }
 }
