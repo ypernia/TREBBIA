@@ -19,6 +19,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\WhatsAppSimulatorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -75,6 +76,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/modulos/reportes', ReportController::class)->name('reports.index');
         Route::get('/modulos/membresia', [MembershipController::class, 'index'])->name('membership.index');
         Route::put('/modulos/membresia', [MembershipController::class, 'update'])->name('membership.update');
+        Route::get('/modulos/whatsapp-demo', [WhatsAppSimulatorController::class, 'index'])->name('whatsapp-simulator.index');
+        Route::post('/modulos/whatsapp-demo', [WhatsAppSimulatorController::class, 'store'])->name('whatsapp-simulator.store');
+        Route::post('/modulos/whatsapp-demo/{conversation}/reiniciar', [WhatsAppSimulatorController::class, 'reset'])->name('whatsapp-simulator.reset');
         Route::get('/modulos/{module}', ModuleController::class)->name('modules.show');
     });
 });
