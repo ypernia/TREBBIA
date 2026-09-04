@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\BookingIntentInterpreter;
 use App\Models\Appointment;
 use App\Models\Conversation;
 use App\Services\BookingEngine;
@@ -18,6 +19,7 @@ class WhatsAppSimulatorController extends Controller
     public function __construct(
         private ConversationManager $conversations,
         private BookingEngine $booking,
+        private BookingIntentInterpreter $interpreter,
     ) {}
 
     public function index(Request $request): View
@@ -101,98 +103,98 @@ class WhatsAppSimulatorController extends Controller
     {
         $state = $conversation->state?->state ?? 'idle';
         $data = $conversation->state?->data ?? [];
-        $message = $this->normalizeText($body);
+        $parsed = $this->interpreter->interpret($business, $body, [
+            ...$data,
+            'intent' => $conversation->intent,
+            'state' => $state,
+        ]);
 
-        if (str_contains($message, 'cancelar') || str_contains($message, 'reiniciar')) {
+        if ($parsed['reset'] ?? false) {
             $this->conversations->updateState($conversation, 'idle');
             $conversation->update(['intent' => null, 'current_step' => 'idle']);
 
             return 'Listo. Reinicie el flujo. Escribe "quiero agendar" para iniciar una reserva.';
         }
 
-        if ($state === 'idle' && ! Str::contains($message, ['agendar', 'reservar', 'cita'])) {
+        if ($state === 'idle' && ($parsed['intent'] ?? null) !== 'booking') {
             return 'Hola, soy el simulador de WhatsApp de TREBBIA. Puedes escribir "quiero agendar" para probar una reserva.';
         }
 
-        if ($state === 'idle') {
-            $this->setConversationState($conversation, 'booking', 'awaiting_service');
+        $data = $this->mergeBookingData($data, $parsed);
+        $service = $this->booking->service($business, $data['service_id'] ?? null);
+
+        if (! $service) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_service', $data);
+            if ($state === 'awaiting_service') {
+                return "No encontre ese servicio. Prueba escribiendo uno de estos nombres:\n\n".$this->serviceList($business);
+            }
 
             return "Claro. Que servicio deseas reservar?\n\n".$this->serviceList($business);
         }
 
-        if ($state === 'awaiting_service') {
-            $service = $this->matchService($business, $body);
+        $data['service_id'] = $service->id;
+        $professionals = $this->booking->professionalsForService($business, $service);
 
-            if (! $service) {
-                return "No encontre ese servicio. Prueba escribiendo uno de estos nombres:\n\n".$this->serviceList($business);
-            }
+        if ($professionals->isEmpty()) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_professional', $data);
 
-            $professionals = $this->booking->professionalsForService($business, $service);
-            $this->setConversationState($conversation, 'booking', 'awaiting_professional', ['service_id' => $service->id]);
+            return 'Ese servicio no tiene profesionales activos asociados. Configuralos en TREBBIA antes de reservar.';
+        }
 
-            if ($professionals->isEmpty()) {
-                return 'Ese servicio no tiene profesionales activos asociados. Configuralos en TREBBIA antes de reservar.';
+        if (empty($data['professional_id']) && $professionals->count() === 1) {
+            $data['professional_id'] = $professionals->first()->id;
+        }
+
+        $professional = $data['professional_id']
+            ? $professionals->firstWhere('id', (int) $data['professional_id'])
+            : null;
+
+        if (! $professional) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_professional', $data);
+
+            if ($state === 'awaiting_professional') {
+                return 'No encontre ese profesional para el servicio seleccionado. Escribe el nombre tal como aparece en la lista.';
             }
 
             return "Perfecto: {$service->name}. Con que profesional deseas atenderte?\n\n".$professionals->pluck('name')->implode("\n");
         }
 
-        if ($state === 'awaiting_professional') {
-            $service = $this->booking->service($business, $data['service_id'] ?? null);
-            $professional = $service ? $this->matchProfessional($business, $service, $body) : null;
+        $data['professional_id'] = $professional->id;
 
-            if (! $service || ! $professional) {
-                return 'No encontre ese profesional para el servicio seleccionado. Escribe el nombre tal como aparece en la lista.';
-            }
+        if (empty($data['date'])) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_date', $data);
 
-            $this->setConversationState($conversation, 'booking', 'awaiting_date', [
-                'service_id' => $service->id,
-                'professional_id' => $professional->id,
-            ]);
-
-            return "Bien. Que fecha deseas? Puedes escribir manana o una fecha como 2026-09-07.";
+            return 'Bien. Que fecha deseas? Puedes escribir manana, lunes, 2026-09-07, 2026/09/07 o 7 de septiembre.';
         }
 
-        if ($state === 'awaiting_date') {
-            $service = $this->booking->service($business, $data['service_id'] ?? null);
-            $date = $this->parseDate($business, $body);
+        $date = CarbonImmutable::parse($data['date'], $business->timezone);
+        $slots = $this->availableSlotStrings($business, $service, $professional->id, $date);
 
-            if (! $service || ! $date) {
-                return 'No pude entender la fecha. Escribe por ejemplo: manana o 2026-09-07.';
-            }
+        if ($slots === []) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_date', $data);
 
-            $slots = $this->booking->availableSlots($business, $service, (int) $data['professional_id'], $date)
-                ->take(6)
-                ->map->format('H:i')
-                ->values()
-                ->all();
+            return 'No encontre horarios disponibles para esa fecha. Prueba con otro dia.';
+        }
 
-            if ($slots === []) {
-                return 'No encontre horarios disponibles para esa fecha. Prueba con otro dia.';
-            }
+        $data['slots'] = $slots;
 
-            $this->setConversationState($conversation, 'booking', 'awaiting_time', [
-                'service_id' => $service->id,
-                'professional_id' => $data['professional_id'],
-                'date' => $date->toDateString(),
-                'slots' => $slots,
-            ]);
+        if (empty($data['time']) && ! empty($data['time_after'])) {
+            $data['time'] = collect($slots)->first(fn (string $slot): bool => $slot >= $data['time_after']);
+        }
+
+        if (empty($data['time'])) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_time', $data);
 
             return "Tengo estos horarios disponibles:\n\n".implode("\n", $slots)."\n\nEscribe el horario que deseas confirmar.";
         }
 
-        if ($state === 'awaiting_time') {
-            $time = $this->parseTime($body);
-            $slots = $data['slots'] ?? [];
+        if (! in_array($data['time'], $slots, true)) {
+            $this->setConversationState($conversation, 'booking', 'awaiting_time', $data);
 
-            if (! $time || ! in_array($time, $slots, true)) {
-                return 'Ese horario no esta en la lista disponible. Escribe uno exactamente como aparece, por ejemplo 09:00.';
-            }
-
-            return $this->confirmAppointment($business, $conversation, $data, $time);
+            return "Ese horario no esta disponible. Tengo estas opciones:\n\n".implode("\n", $slots)."\n\nEscribe el horario que prefieres.";
         }
 
-        return 'Ya tengo una conversacion abierta. Escribe "reiniciar" si quieres empezar de nuevo.';
+        return $this->confirmAppointment($business, $conversation, $data, $data['time']);
     }
 
     private function confirmAppointment($business, Conversation $conversation, array $data, string $time): string
@@ -249,59 +251,24 @@ class WhatsAppSimulatorController extends Controller
             : $services->implode("\n");
     }
 
-    private function matchService($business, string $body)
+    private function mergeBookingData(array $data, array $parsed): array
     {
-        $message = $this->normalizeText($body);
-
-        return $this->booking->services($business)->first(
-            fn ($service) => str_contains($message, $this->normalizeText($service->name))
-                || str_contains($this->normalizeText($service->name), $message)
-        );
-    }
-
-    private function matchProfessional($business, $service, string $body)
-    {
-        $message = $this->normalizeText($body);
-
-        return $this->booking->professionalsForService($business, $service)->first(
-            fn ($professional) => str_contains($message, $this->normalizeText($professional->name))
-                || str_contains($this->normalizeText($professional->name), $message)
-        );
-    }
-
-    private function parseDate($business, string $body): ?CarbonImmutable
-    {
-        $message = $this->normalizeText($body);
-
-        if (str_contains($message, 'manana')) {
-            return CarbonImmutable::now($business->timezone)->addDay()->startOfDay();
+        foreach (['service_id', 'professional_id', 'date', 'time', 'time_after'] as $key) {
+            if (array_key_exists($key, $parsed)) {
+                $data[$key] = $parsed[$key];
+            }
         }
 
-        if (preg_match('/\d{4}-\d{2}-\d{2}/', $body, $match)) {
-            return CarbonImmutable::parse($match[0], $business->timezone);
-        }
-
-        return null;
+        return $data;
     }
 
-    private function parseTime(string $body): ?string
+    private function availableSlotStrings($business, $service, int $professionalId, CarbonImmutable $date): array
     {
-        if (! preg_match('/\b([01]?\d|2[0-3]):([0-5]\d)\b/', $body, $match)) {
-            return null;
-        }
-
-        return str_pad($match[1], 2, '0', STR_PAD_LEFT).':'.$match[2];
-    }
-
-    private function normalizeText(string $value): string
-    {
-        $value = Str::lower(trim($value));
-
-        return str_replace(
-            ['á', 'é', 'í', 'ó', 'ú', 'ñ'],
-            ['a', 'e', 'i', 'o', 'u', 'n'],
-            $value,
-        );
+        return $this->booking->availableSlots($business, $service, $professionalId, $date)
+            ->take(8)
+            ->map->format('H:i')
+            ->values()
+            ->all();
     }
 
     private function normalizePhone(string $value): string

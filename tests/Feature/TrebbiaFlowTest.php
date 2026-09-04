@@ -1225,6 +1225,73 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_whatsapp_simulator_understands_flexible_full_booking_message(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+        ]);
+        $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('whatsapp-simulator.store'), [
+                'phone' => '573001112233',
+                'name' => 'Ana WhatsApp',
+                'body' => 'Quiero agendar fisioterapia con Laura el 2026/09/07 a las 9',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'source_channel' => Appointment::SOURCE_WHATSAPP,
+        ]);
+    }
+
+    public function test_whatsapp_simulator_uses_next_available_slot_after_time_preference(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+        ]);
+        $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+        $business->appointments()->create([
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('whatsapp-simulator.store'), [
+                'phone' => '573001112233',
+                'name' => 'Ana WhatsApp',
+                'body' => 'Quiero una cita de fisioterapia con Laura el 2026-09-07 despues de las 9',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 10:00:00',
+            'source_channel' => Appointment::SOURCE_WHATSAPP,
+        ]);
+    }
+
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array
     {
         $user = User::factory()->create(['email' => $email]);
