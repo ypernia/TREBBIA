@@ -18,18 +18,36 @@
             'simulated' => 'Modo enlace',
             default => 'Modo enlace',
         };
+        $settingsTabs = [
+            ['key' => 'profile', 'label' => 'Perfil', 'icon' => 'briefcase'],
+            ['key' => 'agenda', 'label' => 'Agenda', 'icon' => 'calendar'],
+            ['key' => 'whatsapp', 'label' => 'WhatsApp', 'icon' => 'message'],
+            ['key' => 'branches', 'label' => 'Sedes', 'icon' => 'box'],
+            ['key' => 'team', 'label' => 'Equipo', 'icon' => 'users'],
+        ];
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="max-w-2xl text-sm text-[#64716d]">Administra la informacion operativa del negocio, sedes, preferencias de agenda y usuarios internos.</p>
+        <p class="max-w-2xl text-sm text-[#64716d]">Configura solo lo necesario para operar: negocio, agenda, WhatsApp, sedes y equipo.</p>
         <a class="trebbia-button trebbia-button-secondary" href="{{ route('schedules.edit') }}">Editar horarios generales</a>
     </div>
 
     @include('partials.errors')
 
+    <div class="trebbia-card mb-5 overflow-x-auto p-2" role="tablist" aria-label="Secciones de configuracion">
+        <div class="flex min-w-max gap-1">
+            @foreach ($settingsTabs as $tab)
+                <button class="trebbia-tab" type="button" role="tab" aria-selected="{{ $loop->first ? 'true' : 'false' }}" data-settings-tab="{{ $tab['key'] }}">
+                    <x-icon :name="$tab['icon']" class="size-4" />
+                    {{ $tab['label'] }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
     <div class="grid gap-6 xl:grid-cols-[1fr_24rem]">
         <main class="space-y-6">
-            <section class="trebbia-card p-6">
+            <section class="trebbia-card p-6" data-settings-panel="profile">
                 <h2 class="text-xl font-bold">Perfil del negocio</h2>
                 <form method="POST" action="{{ route('settings.business.update') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
                     @csrf
@@ -72,7 +90,7 @@
                 </form>
             </section>
 
-            <section id="agenda-preferences" class="trebbia-card p-6">
+            <section id="agenda-preferences" class="trebbia-card p-6" data-settings-panel="agenda">
                 <h2 class="text-xl font-bold">Preferencias de agenda</h2>
                 <form method="POST" action="{{ route('settings.preferences.update') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
                     @csrf
@@ -119,7 +137,7 @@
                 </form>
             </section>
 
-            <section class="trebbia-card overflow-hidden">
+            <section class="trebbia-card overflow-hidden" data-settings-panel="whatsapp">
                 <div class="border-b border-[#e7ebe7] p-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
@@ -176,7 +194,7 @@
                 </div>
             </section>
 
-            <section id="whatsapp-channel" class="trebbia-card p-6">
+            <section id="whatsapp-channel" class="trebbia-card p-6" data-settings-panel="whatsapp">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-xl font-bold">Canal WhatsApp</h2>
@@ -263,7 +281,7 @@
                 </form>
             </section>
 
-            <section class="trebbia-card overflow-hidden">
+            <section id="branches" class="trebbia-card overflow-hidden" data-settings-panel="branches">
                 <div class="border-b border-[#e7ebe7] p-6">
                     <h2 class="text-xl font-bold">Sedes</h2>
                     <p class="mt-1 text-sm text-[#64716d]">Configura sucursales, consultorios o puntos de atencion.</p>
@@ -327,7 +345,7 @@
                 </form>
             </section>
 
-            <section class="trebbia-card overflow-hidden">
+            <section id="team" class="trebbia-card overflow-hidden" data-settings-panel="team">
                 <div class="border-b border-[#e7ebe7] p-6">
                     <h2 class="text-xl font-bold">Equipo interno</h2>
                     <p class="mt-1 text-sm text-[#64716d]">Invita usuarios, asigna roles y vincula profesionales del negocio.</p>
