@@ -103,8 +103,16 @@ class SettingsController extends Controller
             'phone_number_id' => ['nullable', 'string', 'max:120'],
             'waba_id' => ['nullable', 'string', 'max:120'],
             'access_token' => ['nullable', 'string', 'max:4000'],
+            'billing_owner_confirmed' => ['nullable', 'boolean'],
         ]);
 
+        abort_if(
+            ($attributes['phone_number_id'] ?? null) && ! $request->boolean('billing_owner_confirmed'),
+            422,
+            'Confirma que la WABA, el numero y la facturacion pertenecen al negocio.',
+        );
+
+        $cloudApiConfigured = filled($attributes['phone_number_id'] ?? null);
         $settings = array_merge($this->defaultWhatsappSettings($business), [
             'enabled' => $request->boolean('enabled'),
             'phone' => $this->normalizeWhatsappPhone($attributes['phone'] ?? ''),
@@ -114,8 +122,10 @@ class SettingsController extends Controller
             'unavailable_message' => $attributes['unavailable_message'],
             'confirmation_message' => $attributes['confirmation_message'],
             'appointment_status' => $attributes['appointment_status'],
-            'mode' => 'simulated',
-            'status' => $request->boolean('enabled') ? 'simulated' : 'disabled',
+            'mode' => $cloudApiConfigured ? 'cloud_api_manual' : 'simulated',
+            'status' => $request->boolean('enabled') ? ($cloudApiConfigured ? 'configured' : 'simulated') : 'disabled',
+            'billing_model' => $cloudApiConfigured ? 'business_owned' : null,
+            'billing_owner_confirmed' => $cloudApiConfigured && $request->boolean('billing_owner_confirmed'),
         ]);
 
         $business->settings()->firstOrCreate([])->update(['whatsapp_settings' => $settings]);
@@ -138,7 +148,11 @@ class SettingsController extends Controller
                     'waba_id' => $attributes['waba_id'] ?? null,
                     'is_active' => $settings['enabled'],
                     'status' => $settings['enabled'] ? 'configured' : 'disabled',
-                    'metadata' => ['mode' => 'cloud_api'],
+                    'metadata' => [
+                        'mode' => 'cloud_api_manual',
+                        'billing_model' => 'business_owned',
+                        'billing_owner_confirmed' => true,
+                    ],
                 ],
             );
 
@@ -234,6 +248,8 @@ class SettingsController extends Controller
             'appointment_status' => 'scheduled',
             'mode' => 'simulated',
             'status' => 'not_configured',
+            'billing_model' => null,
+            'billing_owner_confirmed' => false,
         ];
     }
 

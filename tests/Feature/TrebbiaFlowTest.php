@@ -424,6 +424,7 @@ class TrebbiaFlowTest extends TestCase
                 'phone_number_id' => '1234567890',
                 'waba_id' => '9876543210',
                 'access_token' => 'EAAB_demo_token',
+                'billing_owner_confirmed' => 1,
             ])
             ->assertRedirect(route('settings.index'));
 
@@ -433,7 +434,10 @@ class TrebbiaFlowTest extends TestCase
         $this->assertTrue($settings['enabled']);
         $this->assertSame('573113302090', $settings['phone']);
         $this->assertSame('confirmed', $settings['appointment_status']);
-        $this->assertSame('simulated', $settings['status']);
+        $this->assertSame('configured', $settings['status']);
+        $this->assertSame('cloud_api_manual', $settings['mode']);
+        $this->assertSame('business_owned', $settings['billing_model']);
+        $this->assertTrue($settings['billing_owner_confirmed']);
         $this->assertDatabaseHas('whatsapp_accounts', [
             'business_id' => $business->id,
             'phone_number_id' => '1234567890',
