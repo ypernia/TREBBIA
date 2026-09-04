@@ -17,6 +17,7 @@ use App\Models\Resource;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\BookingEngine;
+use App\Services\ConversationManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -1128,6 +1129,58 @@ class TrebbiaFlowTest extends TestCase
             'starts_at' => CarbonImmutable::parse('2026-09-07 11:00', $business->timezone),
             'status' => 'scheduled',
         ]);
+    }
+
+    public function test_conversation_manager_stores_whatsapp_contact_messages_and_state(): void
+    {
+        [, $business] = $this->tenantUser();
+        $manager = app(ConversationManager::class);
+
+        $contact = $manager->contactForWhatsapp($business, '573001112233', 'Ana WhatsApp', 'wa-contact-1');
+        $conversation = $manager->openConversation($business, $contact);
+        $message = $manager->recordIncoming($conversation, [
+            'external_message_id' => 'wamid.demo-1',
+            'body' => 'Hola, quiero agendar fisioterapia.',
+            'payload' => ['type' => 'text'],
+            'received_at' => now(),
+        ]);
+        $duplicate = $manager->recordIncoming($conversation, [
+            'external_message_id' => 'wamid.demo-1',
+            'body' => 'Mensaje duplicado por reintento.',
+        ]);
+        $reply = $manager->recordOutgoing($conversation, 'Claro. Que servicio deseas reservar?');
+        $state = $manager->updateState($conversation, 'collecting_service', [
+            'raw_service' => 'fisioterapia',
+        ]);
+
+        $this->assertSame($message->id, $duplicate->id);
+        $this->assertSame('queued', $reply->status);
+        $this->assertSame('collecting_service', $state->state);
+        $this->assertSame(2, $conversation->messages()->count());
+        $this->assertDatabaseHas('whatsapp_contacts', [
+            'business_id' => $business->id,
+            'phone' => '573001112233',
+            'external_contact_id' => 'wa-contact-1',
+        ]);
+        $this->assertDatabaseHas('conversation_states', [
+            'business_id' => $business->id,
+            'conversation_id' => $conversation->id,
+            'state' => 'collecting_service',
+        ]);
+    }
+
+    public function test_whatsapp_contacts_are_isolated_by_business(): void
+    {
+        [, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Otra Clinica', 'otra@example.com');
+        $manager = app(ConversationManager::class);
+
+        $contact = $manager->contactForWhatsapp($business, '573001112233', 'Cliente propio');
+        $otherContact = $manager->contactForWhatsapp($otherBusiness, '573001112233', 'Cliente ajeno');
+
+        $this->assertNotSame($contact->id, $otherContact->id);
+        $this->assertSame($business->id, $contact->business_id);
+        $this->assertSame($otherBusiness->id, $otherContact->business_id);
     }
 
     private function tenantUser(string $businessName = 'Clinica Demo', string $email = 'owner@example.com'): array

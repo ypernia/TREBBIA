@@ -81,6 +81,21 @@ class Business extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function whatsappContacts()
+    {
+        return $this->hasMany(WhatsAppContact::class);
+    }
+
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
+    public function conversationMessages()
+    {
+        return $this->hasMany(ConversationMessage::class);
+    }
+
     public function appointmentReminders()
     {
         return $this->hasMany(AppointmentReminder::class);
