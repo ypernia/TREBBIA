@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ClinicalRecordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\MetaWhatsAppWebhookController;
@@ -60,6 +61,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class);
+        Route::get('/modulos/historia-clinica', [ClinicalRecordController::class, 'index'])->name('clinical-records.index');
+        Route::post('/clientes/{cliente}/historia-clinica', [ClinicalRecordController::class, 'store'])->name('clinical-records.store');
+        Route::put('/clientes/{cliente}/historia-clinica/{clinicalRecord}', [ClinicalRecordController::class, 'update'])->name('clinical-records.update');
         Route::post('/recursos/sugeridos', [ResourceController::class, 'storeSuggestions'])->name('recursos.suggestions.store');
         Route::resource('recursos', ResourceController::class)->except(['show']);
         Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');

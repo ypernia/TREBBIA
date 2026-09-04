@@ -51,12 +51,29 @@ class ClientController extends Controller
         return view('clients.show', [
             'business' => app('activeBusiness'),
             'client' => $cliente,
+            'professionals' => app('activeBusiness')->professionals()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
             'nextAppointment' => $cliente->appointments()
                 ->with(['professional', 'service'])
                 ->where('business_id', app('activeBusiness')->id)
                 ->where('starts_at', '>=', now())
                 ->orderBy('starts_at')
                 ->first(),
+            'clinicalAppointments' => $cliente->appointments()
+                ->with(['professional', 'service'])
+                ->where('business_id', app('activeBusiness')->id)
+                ->latest('starts_at')
+                ->take(20)
+                ->get(),
+            'clinicalRecords' => $cliente->clinicalRecords()
+                ->with(['professional', 'appointment.service'])
+                ->where('business_id', app('activeBusiness')->id)
+                ->latest('record_date')
+                ->latest()
+                ->take(10)
+                ->get(),
             'appointments' => $cliente->appointments()
                 ->with(['professional', 'service', 'resource'])
                 ->where('business_id', app('activeBusiness')->id)

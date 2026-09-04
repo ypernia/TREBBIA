@@ -71,6 +71,11 @@ class Business extends Model
         return $this->hasMany(Client::class);
     }
 
+    public function clinicalRecords()
+    {
+        return $this->hasMany(ClinicalRecord::class);
+    }
+
     public function resources()
     {
         return $this->hasMany(Resource::class);

@@ -10,6 +10,7 @@ use App\Models\BusinessInvitation;
 use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
 use App\Models\Client;
+use App\Models\ClinicalRecord;
 use App\Models\Plan;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
@@ -271,6 +272,78 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('Consulta')
             ->assertSee('Dra. Mora')
             ->assertSee('Confirmada');
+    }
+
+    public function test_clinical_history_can_be_created_from_client_profile(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create([
+            'name' => 'Ana Ruiz',
+            'email' => 'ana@example.com',
+            'is_active' => true,
+        ]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clientes.show', $client))
+            ->assertOk()
+            ->assertSee('Historia clinica')
+            ->assertSee('Dolor 0-10');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('clinical-records.store', $client), [
+                'record_date' => '2026-09-04',
+                'professional_id' => $professional->id,
+                'reason_for_visit' => 'Dolor lumbar',
+                'diagnosis' => 'Contractura muscular lumbar.',
+                'pain_scale' => 6,
+                'subjective' => 'Dolor al estar sentado por largos periodos.',
+                'objective' => 'Limitacion leve de movilidad.',
+                'treatment_plan' => 'Terapia manual y ejercicios guiados.',
+                'evolution' => 'Primera valoracion.',
+                'recommendations' => 'Pausas activas cada dos horas.',
+                'next_steps' => 'Control en una semana.',
+                'status' => ClinicalRecord::STATUS_FINAL,
+            ])->assertRedirect(route('clientes.show', $client));
+
+        $this->assertDatabaseHas('clinical_records', [
+            'business_id' => $business->id,
+            'client_id' => $client->id,
+            'professional_id' => $professional->id,
+            'reason_for_visit' => 'Dolor lumbar',
+            'pain_scale' => 6,
+            'status' => ClinicalRecord::STATUS_FINAL,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clinical-records.index'))
+            ->assertOk()
+            ->assertSee('Dolor lumbar')
+            ->assertSee('Ana Ruiz');
+    }
+
+    public function test_clinical_history_cannot_be_created_for_another_business_client(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Other Clinic', 'other-clinic@example.com');
+        $client = $otherBusiness->clients()->create(['name' => 'Paciente Privado']);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('clinical-records.store', $client), [
+                'record_date' => '2026-09-04',
+                'reason_for_visit' => 'Consulta privada',
+                'status' => ClinicalRecord::STATUS_DRAFT,
+            ])->assertNotFound();
+
+        $this->assertDatabaseMissing('clinical_records', [
+            'business_id' => $otherBusiness->id,
+            'client_id' => $client->id,
+            'reason_for_visit' => 'Consulta privada',
+        ]);
     }
 
     public function test_clients_can_be_filtered_by_document_and_status(): void

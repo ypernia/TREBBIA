@@ -42,4 +42,9 @@ class Professional extends Model
             ->withPivot('business_id')
             ->withTimestamps();
     }
+
+    public function clinicalRecords()
+    {
+        return $this->hasMany(ClinicalRecord::class);
+    }
 }

@@ -18,6 +18,11 @@
             'cancelled' => 'bg-[#fff4f2] text-[#8a3027]',
             'completed' => 'bg-[#f1f1ef] text-[#53615d]',
         ];
+        $clinicalStatusLabels = \App\Models\ClinicalRecord::statusLabels();
+        $clinicalStatusStyles = [
+            'draft' => 'bg-[#fff7ed] text-[#9a4f12]',
+            'final' => 'bg-[#edf7f4] text-[#245f57]',
+        ];
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -101,6 +106,131 @@
                         Este cliente no tiene citas proximas.
                     </div>
                 @endif
+            </section>
+
+            <section class="trebbia-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold">Historia clinica</h2>
+                        <p class="mt-1 text-sm text-[#64716d]">Registra valoraciones, evolucion, plan de tratamiento y recomendaciones del paciente.</p>
+                    </div>
+                    <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('clinical-records.index') }}">Ver modulo</a>
+                </div>
+
+                @include('partials.errors')
+
+                <form method="POST" action="{{ route('clinical-records.store', $client) }}" class="mt-5 grid gap-4 md:grid-cols-2">
+                    @csrf
+                    <div>
+                        <label class="trebbia-label" for="record_date">Fecha</label>
+                        <input class="trebbia-input" id="record_date" type="date" name="record_date" value="{{ old('record_date', now()->format('Y-m-d')) }}" required>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="professional_id">Profesional</label>
+                        <select class="trebbia-input" id="professional_id" name="professional_id">
+                            <option value="">Sin asignar</option>
+                            @foreach ($professionals as $professional)
+                                <option value="{{ $professional->id }}" @selected((string) old('professional_id') === (string) $professional->id)>{{ $professional->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="appointment_id">Cita relacionada</label>
+                        <select class="trebbia-input" id="appointment_id" name="appointment_id">
+                            <option value="">Sin relacionar</option>
+                            @foreach ($clinicalAppointments as $appointment)
+                                <option value="{{ $appointment->id }}" @selected((string) old('appointment_id') === (string) $appointment->id)>
+                                    {{ $appointment->starts_at->format('d/m/Y H:i') }} - {{ $appointment->service?->name ?: 'Servicio' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="pain_scale">Dolor 0-10</label>
+                        <input class="trebbia-input" id="pain_scale" type="number" min="0" max="10" name="pain_scale" value="{{ old('pain_scale') }}" placeholder="Ej: 6">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="trebbia-label" for="reason_for_visit">Motivo de consulta</label>
+                        <input class="trebbia-input" id="reason_for_visit" name="reason_for_visit" value="{{ old('reason_for_visit') }}" placeholder="Ej: Dolor lumbar, control, rehabilitacion postoperatoria">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="trebbia-label" for="diagnosis">Impresion diagnostica</label>
+                        <textarea class="trebbia-input" id="diagnosis" name="diagnosis" rows="3">{{ old('diagnosis') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="subjective">Subjetivo</label>
+                        <textarea class="trebbia-input" id="subjective" name="subjective" rows="4" placeholder="Lo que reporta el paciente">{{ old('subjective') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="objective">Objetivo</label>
+                        <textarea class="trebbia-input" id="objective" name="objective" rows="4" placeholder="Hallazgos, movilidad, pruebas, signos observados">{{ old('objective') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="treatment_plan">Plan de tratamiento</label>
+                        <textarea class="trebbia-input" id="treatment_plan" name="treatment_plan" rows="4">{{ old('treatment_plan') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="evolution">Evolucion</label>
+                        <textarea class="trebbia-input" id="evolution" name="evolution" rows="4">{{ old('evolution') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="recommendations">Recomendaciones</label>
+                        <textarea class="trebbia-input" id="recommendations" name="recommendations" rows="4">{{ old('recommendations') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="trebbia-label" for="next_steps">Proximos pasos</label>
+                        <textarea class="trebbia-input" id="next_steps" name="next_steps" rows="4">{{ old('next_steps') }}</textarea>
+                    </div>
+                    <div class="flex items-end gap-3 md:col-span-2">
+                        <div class="min-w-48">
+                            <label class="trebbia-label" for="status">Estado</label>
+                            <select class="trebbia-input" id="status" name="status">
+                                @foreach ($clinicalStatusLabels as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('status', 'draft') === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button class="trebbia-button">Guardar historia</button>
+                    </div>
+                </form>
+
+                <div class="mt-6 space-y-4">
+                    @forelse ($clinicalRecords as $record)
+                        <article class="rounded-md border border-[#e1e6e0] p-4">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="font-bold">{{ $record->record_date->format('d/m/Y') }}{{ $record->reason_for_visit ? ' - '.$record->reason_for_visit : '' }}</p>
+                                    <p class="mt-1 text-sm text-[#64716d]">{{ $record->professional?->name ?: 'Profesional sin asignar' }}{{ $record->appointment?->service ? ' - '.$record->appointment->service->name : '' }}</p>
+                                </div>
+                                <span class="w-fit rounded-md px-2 py-1 text-xs font-bold {{ $clinicalStatusStyles[$record->status] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">
+                                    {{ $clinicalStatusLabels[$record->status] ?? ucfirst($record->status) }}
+                                </span>
+                            </div>
+                            <div class="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                                @foreach ([
+                                    'Impresion' => $record->diagnosis,
+                                    'Plan' => $record->treatment_plan,
+                                    'Evolucion' => $record->evolution,
+                                    'Recomendaciones' => $record->recommendations,
+                                ] as $label => $value)
+                                    @if ($value)
+                                        <div>
+                                            <p class="font-bold text-[#33413d]">{{ $label }}</p>
+                                            <p class="mt-1 whitespace-pre-line text-[#64716d]">{{ $value }}</p>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                            @if (! is_null($record->pain_scale))
+                                <p class="mt-3 text-sm font-bold text-[#245f57]">Dolor registrado: {{ $record->pain_scale }}/10</p>
+                            @endif
+                        </article>
+                    @empty
+                        <div class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">
+                            Este paciente aun no tiene historias clinicas registradas.
+                        </div>
+                    @endforelse
+                </div>
             </section>
 
             <section class="trebbia-card overflow-hidden">
