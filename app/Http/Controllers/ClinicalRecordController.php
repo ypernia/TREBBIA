@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\ClinicalRecord;
+use App\Support\ModuleAvailability;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -12,6 +13,7 @@ class ClinicalRecordController extends Controller
     public function index()
     {
         $business = app('activeBusiness');
+        abort_unless(ModuleAvailability::clinicalHistory($business), 404);
 
         return view('clinical-records.index', [
             'business' => $business,
@@ -28,6 +30,7 @@ class ClinicalRecordController extends Controller
     public function store(Request $request, Client $cliente)
     {
         $this->authorizeClient($cliente);
+        abort_unless(ModuleAvailability::clinicalHistory(app('activeBusiness')), 404);
 
         $cliente->clinicalRecords()->create($this->payload($request, $cliente));
 
@@ -39,6 +42,7 @@ class ClinicalRecordController extends Controller
     public function update(Request $request, Client $cliente, ClinicalRecord $clinicalRecord)
     {
         $this->authorizeClient($cliente);
+        abort_unless(ModuleAvailability::clinicalHistory(app('activeBusiness')), 404);
         $this->authorizeRecord($clinicalRecord, $cliente);
 
         $clinicalRecord->update($this->payload($request, $cliente));

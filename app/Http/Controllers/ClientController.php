@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Support\ModuleAvailability;
 use Illuminate\Http\Request;
 
 class ClientController extends Controller
@@ -41,6 +42,8 @@ class ClientController extends Controller
     public function show(Client $cliente)
     {
         $this->authorizeTenant($cliente);
+        $business = app('activeBusiness');
+        $showClinicalHistory = ModuleAvailability::clinicalHistory($business);
 
         $cliente->loadCount([
             'appointments',
@@ -49,34 +52,35 @@ class ClientController extends Controller
         ]);
 
         return view('clients.show', [
-            'business' => app('activeBusiness'),
+            'business' => $business,
             'client' => $cliente,
-            'professionals' => app('activeBusiness')->professionals()
+            'showClinicalHistory' => $showClinicalHistory,
+            'professionals' => $showClinicalHistory ? $business->professionals()
                 ->where('is_active', true)
                 ->orderBy('name')
-                ->get(),
+                ->get() : collect(),
             'nextAppointment' => $cliente->appointments()
                 ->with(['professional', 'service'])
-                ->where('business_id', app('activeBusiness')->id)
+                ->where('business_id', $business->id)
                 ->where('starts_at', '>=', now())
                 ->orderBy('starts_at')
                 ->first(),
-            'clinicalAppointments' => $cliente->appointments()
+            'clinicalAppointments' => $showClinicalHistory ? $cliente->appointments()
                 ->with(['professional', 'service'])
-                ->where('business_id', app('activeBusiness')->id)
+                ->where('business_id', $business->id)
                 ->latest('starts_at')
                 ->take(20)
-                ->get(),
-            'clinicalRecords' => $cliente->clinicalRecords()
+                ->get() : collect(),
+            'clinicalRecords' => $showClinicalHistory ? $cliente->clinicalRecords()
                 ->with(['professional', 'appointment.service'])
-                ->where('business_id', app('activeBusiness')->id)
+                ->where('business_id', $business->id)
                 ->latest('record_date')
                 ->latest()
                 ->take(10)
-                ->get(),
+                ->get() : collect(),
             'appointments' => $cliente->appointments()
                 ->with(['professional', 'service', 'resource'])
-                ->where('business_id', app('activeBusiness')->id)
+                ->where('business_id', $business->id)
                 ->latest('starts_at')
                 ->paginate(8),
         ]);

@@ -14,7 +14,9 @@
     @php
         $nav = [
             ['label' => 'Inicio', 'href' => route('dashboard'), 'active' => request()->routeIs('dashboard')],
-            ...collect(config('trebbia.modules'))->map(fn ($item, $key) => [
+            ...collect(config('trebbia.modules'))
+                ->filter(fn ($item, $key) => \App\Support\ModuleAvailability::isAvailable($key, $activeBusiness ?? null))
+                ->map(fn ($item, $key) => [
                 'label' => $item['label'],
                 'href' => isset($item['route']) ? route($item['route']) : route('modules.show', $key),
                 'active' => isset($item['route']) ? request()->routeIs(str_replace('.index', '.*', $item['route'])) || request()->routeIs($item['route']) : request()->is("modulos/{$key}"),

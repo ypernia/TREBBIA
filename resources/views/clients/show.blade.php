@@ -108,6 +108,7 @@
                 @endif
             </section>
 
+            @if ($showClinicalHistory)
             <section class="trebbia-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -232,6 +233,7 @@
                     @endforelse
                 </div>
             </section>
+            @endif
 
             <section class="trebbia-card overflow-hidden">
                 <div class="border-b border-[#e7ebe7] p-5">

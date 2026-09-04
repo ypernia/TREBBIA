@@ -277,6 +277,7 @@ class TrebbiaFlowTest extends TestCase
     public function test_clinical_history_can_be_created_from_client_profile(): void
     {
         [$user, $business] = $this->tenantUser();
+        $business->update(['industry' => 'Fisioterapia']);
         $client = $business->clients()->create([
             'name' => 'Ana Ruiz',
             'email' => 'ana@example.com',
@@ -328,6 +329,7 @@ class TrebbiaFlowTest extends TestCase
     public function test_clinical_history_cannot_be_created_for_another_business_client(): void
     {
         [$user, $business] = $this->tenantUser();
+        $business->update(['industry' => 'Fisioterapia']);
         [, $otherBusiness] = $this->tenantUser('Other Clinic', 'other-clinic@example.com');
         $client = $otherBusiness->clients()->create(['name' => 'Paciente Privado']);
 
@@ -344,6 +346,31 @@ class TrebbiaFlowTest extends TestCase
             'client_id' => $client->id,
             'reason_for_visit' => 'Consulta privada',
         ]);
+    }
+
+    public function test_clinical_history_is_hidden_for_non_health_businesses(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->update(['industry' => 'Barberia']);
+        $client = $business->clients()->create(['name' => 'Cliente Barberia', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Historia clinica');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clientes.show', $client))
+            ->assertOk()
+            ->assertDontSee('Historia clinica')
+            ->assertDontSee('Dolor 0-10');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('clinical-records.index'))
+            ->assertNotFound();
     }
 
     public function test_clients_can_be_filtered_by_document_and_status(): void

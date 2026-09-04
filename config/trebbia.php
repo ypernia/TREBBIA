@@ -11,7 +11,13 @@ return [
     'modules' => [
         'agenda' => ['label' => 'Agenda', 'status' => 'Funcional', 'route' => 'agenda.index', 'summary' => 'Vista operativa para citas, bloqueos y disponibilidad.'],
         'clientes' => ['label' => 'Clientes', 'status' => 'Funcional', 'route' => 'clientes.index', 'summary' => 'Base de clientes con historial y datos de contacto.'],
-        'historia_clinica' => ['label' => 'Historia clinica', 'status' => 'Funcional', 'route' => 'clinical-records.index', 'summary' => 'Evoluciones, diagnosticos, planes y recomendaciones por paciente.'],
+        'historia_clinica' => [
+            'label' => 'Historia clinica',
+            'status' => 'Funcional',
+            'route' => 'clinical-records.index',
+            'summary' => 'Evoluciones, diagnosticos, planes y recomendaciones por paciente.',
+            'available_for_industries' => ['salud', 'fisioterapia', 'fisio', 'spa', 'veterinaria', 'estetica', 'medicina', 'odontologia', 'psicologia', 'terapia', 'rehabilitacion'],
+        ],
         'servicios' => ['label' => 'Servicios', 'status' => 'Funcional', 'route' => 'servicios.index', 'summary' => 'Catalogo inicial preparado para servicios por empresa.'],
         'profesionales' => ['label' => 'Profesionales', 'status' => 'Funcional', 'route' => 'profesionales.index', 'summary' => 'Equipo asociado a sedes, horarios y futuras agendas.'],
         'recursos' => ['label' => 'Recursos', 'status' => 'Funcional', 'route' => 'recursos.index', 'summary' => 'Cabinas, equipos, consultorios u otros recursos reservables.'],
