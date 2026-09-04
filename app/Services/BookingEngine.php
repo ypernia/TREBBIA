@@ -154,6 +154,9 @@ class BookingEngine
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
                 'status' => $attributes['status'] ?? 'scheduled',
+                'source_channel' => $attributes['source_channel'] ?? Appointment::SOURCE_INTERNAL,
+                'source_reference' => $attributes['source_reference'] ?? null,
+                'source_metadata' => $attributes['source_metadata'] ?? null,
                 'notes' => $attributes['notes'] ?? null,
             ]);
         });

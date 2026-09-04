@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Business;
 use App\Services\BookingEngine;
 use Carbon\CarbonImmutable;
@@ -67,6 +68,11 @@ class PublicBookingController extends Controller
             'professional_id' => $attributes['professional_id'],
             'starts_at' => $startsAt,
             'status' => $requiresConfirmation ? 'scheduled' : 'confirmed',
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+            'source_metadata' => [
+                'client_email' => $attributes['client_email'] ?? null,
+                'client_phone' => $attributes['client_phone'] ?? null,
+            ],
             'notes' => $attributes['notes'] ?? null,
         ]);
 

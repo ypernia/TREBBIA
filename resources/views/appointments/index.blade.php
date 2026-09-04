@@ -12,6 +12,11 @@
             'cancelled' => 'bg-[#fff4f2] text-[#8a3027]',
             'completed' => 'bg-[#f1f1ef] text-[#53615d]',
         ];
+        $sourceStyles = [
+            'internal' => 'bg-[#f1f5f9] text-[#334155]',
+            'public_booking' => 'bg-[#ecfeff] text-[#155e75]',
+            'whatsapp' => 'bg-[#edf7f4] text-[#245f57]',
+        ];
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -91,6 +96,7 @@
                                         <p class="mt-1 text-sm text-[#53615d]">{{ $appointment->service?->name ?: 'Servicio' }}</p>
                                         <p class="text-xs text-[#64716d]">{{ $appointment->professional?->name ?: 'Profesional' }}</p>
                                         <p class="text-xs text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
+                                        <span class="mt-2 inline-flex w-fit rounded-md px-2 py-1 text-[11px] font-bold {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
                                     </a>
                                 @empty
                                     <p class="rounded-md border border-dashed border-[#cfd8d2] p-3 text-sm text-[#64716d]">Sin citas</p>
@@ -122,6 +128,7 @@
                         </div>
                         <span class="w-fit rounded-md px-2 py-1 text-xs font-bold {{ $statusStyles[$appointment->status] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $statuses[$appointment->status] ?? ucfirst($appointment->status) }}</span>
                         <div class="flex items-center gap-2 md:justify-end">
+                            <span class="hidden rounded-md px-2 py-1 text-xs font-bold md:inline-flex {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
                             <a class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57]" href="{{ route('agenda.edit', $appointment) }}">Editar</a>
                             <form method="POST" action="{{ route('agenda.destroy', $appointment) }}">
                                 @csrf
@@ -148,6 +155,7 @@
                         <p class="font-bold">{{ $appointment->starts_at->format('d/m H:i') }}</p>
                         <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
                         <p class="text-sm text-[#64716d]">{{ $appointment->service?->name }}</p>
+                        <span class="mt-3 inline-flex rounded-md px-2 py-1 text-xs font-bold {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
                     </a>
                 @empty
                     <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin proximas citas.</p>

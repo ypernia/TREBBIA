@@ -557,6 +557,7 @@ class TrebbiaFlowTest extends TestCase
             'professional_id' => $professional->id,
             'service_id' => $service->id,
             'status' => 'scheduled',
+            'source_channel' => Appointment::SOURCE_INTERNAL,
         ]);
     }
 
@@ -1043,6 +1044,7 @@ class TrebbiaFlowTest extends TestCase
             'professional_id' => $professional->id,
             'service_id' => $service->id,
             'status' => 'scheduled',
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
         ]);
     }
 
