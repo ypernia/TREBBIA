@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BookingShareCenter;
+
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(BookingShareCenter $shareCenter)
     {
         $business = app('activeBusiness');
 
@@ -17,6 +19,7 @@ class DashboardController extends Controller
                 'professionals' => $business->professionals()->where('is_active', true)->count(),
                 'services' => $business->services()->where('is_active', true)->count(),
             ],
+            'share' => $shareCenter->for($business),
             'upcomingAppointments' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())

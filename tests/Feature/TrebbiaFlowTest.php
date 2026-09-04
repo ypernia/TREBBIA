@@ -97,7 +97,8 @@ class TrebbiaFlowTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Inicio')
-            ->assertSee('Servicios activos');
+            ->assertSee('Servicios activos')
+            ->assertSee('Compartir reservas');
     }
 
     public function test_authenticated_user_without_business_is_redirected_to_business_creation(): void
@@ -1057,6 +1058,35 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Reservar por WhatsApp')
             ->assertSee('https://wa.me/573113302090', false);
+    }
+
+    public function test_sharing_center_shows_links_qr_messages_and_checklist(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 30, 'price_cents' => 7000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+        $business->settings()->firstOrCreate([])->update([
+            'public_booking_settings' => ['allow_public_booking' => true],
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573113302090',
+                'entry_message' => 'Hola, quiero agendar una cita',
+                'mode' => 'link',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('sharing.index'))
+            ->assertOk()
+            ->assertSee('Listo para compartir')
+            ->assertSee(route('public-booking.show', $business->slug))
+            ->assertSee('https://wa.me/573113302090', false)
+            ->assertSee('QR pagina publica')
+            ->assertSee('Mensajes sugeridos')
+            ->assertSee('Checklist de activacion');
     }
 
     public function test_public_booking_creates_client_and_appointment(): void
