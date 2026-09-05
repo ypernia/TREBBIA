@@ -72,6 +72,15 @@
 
     <div class="grid gap-6 xl:grid-cols-[1fr_24rem]">
         <section class="trebbia-card overflow-hidden">
+            @if ($errors->has('booking_request'))
+                <div class="border-b border-[#f0c9c4] bg-[#fff4f2] px-5 py-4 text-sm font-semibold text-[#8a3027]">
+                    {{ $errors->first('booking_request') }}
+                    @if (session('booking_request_alternatives'))
+                        <p class="mt-2 text-[#53615d]">Opciones disponibles: {{ implode(' / ', session('booking_request_alternatives')) }}</p>
+                    @endif
+                </div>
+            @endif
+
             <div class="border-b border-[#e7ebe7] p-5">
                 <h2 class="text-lg font-bold">{{ $view === 'week' ? 'Semana del '.$weekStart->format('d/m/Y') : $date->isoFormat('dddd DD/MM/YYYY') }}</h2>
                 <p class="mt-1 text-sm text-[#64716d]">{{ $appointments->count() }} cita{{ $appointments->count() === 1 ? '' : 's' }} en la vista actual.</p>
@@ -153,8 +162,36 @@
             @endif
         </section>
 
-        <aside class="trebbia-card p-5">
-            <h2 class="text-lg font-bold">Proximas</h2>
+        <aside class="space-y-6">
+            <section class="trebbia-card p-5">
+                <h2 class="text-lg font-bold">Solicitudes pendientes</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($pendingBookingRequests as $bookingRequest)
+                        <div class="rounded-md border border-[#e1e6e0] p-4">
+                            <p class="font-bold">{{ $bookingRequest->starts_at->format('d/m H:i') }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $bookingRequest->client?->name ?: 'Cliente sin asignar' }}</p>
+                            <p class="text-sm text-[#64716d]">{{ $bookingRequest->service?->name }} / {{ $bookingRequest->professional?->name }}</p>
+                            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                <form method="POST" action="{{ route('booking-requests.accept', $bookingRequest) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button class="trebbia-button w-full">Aceptar</button>
+                                </form>
+                                <form method="POST" action="{{ route('booking-requests.reject', $bookingRequest) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button class="trebbia-button trebbia-button-secondary w-full">Rechazar</button>
+                                </form>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin solicitudes por aprobar.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="trebbia-card p-5">
+            <h2 class="text-lg font-bold">Proximas citas</h2>
             <div class="mt-4 space-y-3">
                 @forelse ($upcoming as $appointment)
                     <a href="{{ route('agenda.edit', $appointment) }}" class="block rounded-md border border-[#e1e6e0] p-4 hover:border-[#b9d8cd]">
@@ -167,6 +204,7 @@
                     <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin proximas citas.</p>
                 @endforelse
             </div>
+            </section>
         </aside>
     </div>
 @endsection

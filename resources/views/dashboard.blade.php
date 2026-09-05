@@ -9,6 +9,7 @@
         @foreach ([
             ['label' => 'Citas de hoy', 'value' => $metrics['todayAppointments'], 'icon' => 'calendar'],
             ['label' => 'Proximas citas', 'value' => $metrics['upcomingAppointments'], 'icon' => 'calendar'],
+            ['label' => 'Solicitudes pendientes', 'value' => $metrics['pendingRequests'], 'icon' => 'calendar'],
             ['label' => 'Clientes', 'value' => $metrics['clients'], 'icon' => 'users'],
             ['label' => 'Profesionales activos', 'value' => $metrics['professionals'], 'icon' => 'users'],
             ['label' => 'Servicios activos', 'value' => $metrics['services'], 'icon' => 'briefcase'],
@@ -27,6 +28,46 @@
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_24rem]">
         <section class="space-y-6">
+            @if ($pendingBookingRequests->isNotEmpty())
+                <div class="trebbia-card overflow-hidden border-l-4 border-l-[#245f57]">
+                    <div class="border-b border-[#e7ebe7] p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Requiere tu atencion</p>
+                        <h2 class="mt-1 text-lg font-bold">{{ $pendingBookingRequests->count() }} solicitud{{ $pendingBookingRequests->count() === 1 ? '' : 'es' }} de reserva pendiente{{ $pendingBookingRequests->count() === 1 ? '' : 's' }}</h2>
+                    </div>
+                    <div class="divide-y divide-[#e7ebe7]">
+                        @foreach ($pendingBookingRequests as $bookingRequest)
+                            <div class="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                                <div>
+                                    <p class="font-bold">{{ $bookingRequest->starts_at->format('d/m/Y H:i') }} - {{ $bookingRequest->service?->name }}</p>
+                                    <p class="mt-1 text-sm text-[#64716d]">{{ $bookingRequest->client?->name ?: 'Cliente sin asignar' }} / {{ $bookingRequest->professional?->name ?: 'Profesional sin asignar' }}</p>
+                                </div>
+                                <div class="flex flex-col gap-2 sm:flex-row">
+                                    <form method="POST" action="{{ route('booking-requests.accept', $bookingRequest) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button class="trebbia-button w-full sm:w-auto">Aceptar</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('booking-requests.reject', $bookingRequest) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button class="trebbia-button trebbia-button-secondary w-full sm:w-auto">Rechazar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            @if ($errors->has('booking_request'))
+                <div class="rounded-md border border-[#f0c9c4] bg-[#fff4f2] px-4 py-3 text-sm font-semibold text-[#8a3027]">
+                    {{ $errors->first('booking_request') }}
+                    @if (session('booking_request_alternatives'))
+                        <p class="mt-2 text-[#53615d]">Opciones disponibles: {{ implode(' / ', session('booking_request_alternatives')) }}</p>
+                    @endif
+                </div>
+            @endif
+
             <div class="trebbia-card overflow-hidden">
                 <div class="border-b border-[#e7ebe7] p-5">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

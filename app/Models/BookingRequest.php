@@ -3,25 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Appointment extends Model
+class BookingRequest extends Model
 {
-    use SoftDeletes;
+    public const STATUS_PENDING = 'pending';
 
-    public const SOURCE_INTERNAL = 'internal';
+    public const STATUS_ACCEPTED = 'accepted';
 
-    public const SOURCE_PUBLIC_BOOKING = 'public_booking';
+    public const STATUS_REJECTED = 'rejected';
 
-    public const SOURCE_WHATSAPP = 'whatsapp';
-
-    public const STATUS_SCHEDULED = 'scheduled';
-
-    public const STATUS_CONFIRMED = 'confirmed';
-
-    public const STATUS_CANCELLED = 'cancelled';
-
-    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_EXPIRED = 'expired';
 
     protected $fillable = [
         'business_id',
@@ -30,6 +21,7 @@ class Appointment extends Model
         'professional_id',
         'service_id',
         'resource_id',
+        'appointment_id',
         'starts_at',
         'ends_at',
         'status',
@@ -38,6 +30,10 @@ class Appointment extends Model
         'idempotency_key',
         'source_metadata',
         'notes',
+        'requested_at',
+        'decided_at',
+        'decided_by',
+        'decision_notes',
     ];
 
     protected function casts(): array
@@ -45,22 +41,20 @@ class Appointment extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'requested_at' => 'datetime',
+            'decided_at' => 'datetime',
             'source_metadata' => 'array',
         ];
     }
 
-    public static function sourceLabels(): array
+    public static function statusLabels(): array
     {
         return [
-            self::SOURCE_INTERNAL => 'Agenda interna',
-            self::SOURCE_PUBLIC_BOOKING => 'Reserva publica',
-            self::SOURCE_WHATSAPP => 'WhatsApp',
+            self::STATUS_PENDING => 'Pendiente',
+            self::STATUS_ACCEPTED => 'Aceptada',
+            self::STATUS_REJECTED => 'Rechazada',
+            self::STATUS_EXPIRED => 'Expirada',
         ];
-    }
-
-    public function sourceLabel(): string
-    {
-        return self::sourceLabels()[$this->source_channel] ?? ucfirst((string) $this->source_channel);
     }
 
     public function business()
@@ -93,13 +87,13 @@ class Appointment extends Model
         return $this->belongsTo(Resource::class);
     }
 
-    public function reminders()
+    public function appointment()
     {
-        return $this->hasMany(AppointmentReminder::class);
+        return $this->belongsTo(Appointment::class);
     }
 
-    public function clinicalRecords()
+    public function decidedBy()
     {
-        return $this->hasMany(ClinicalRecord::class);
+        return $this->belongsTo(User::class, 'decided_by');
     }
 }

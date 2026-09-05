@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\BookingRequest;
 use App\Models\Business;
 use App\Services\BookingEngine;
 use App\Services\SubscriptionManager;
@@ -66,12 +67,30 @@ class PublicBookingController extends Controller
         $requiresConfirmation = (bool) ($settings->public_booking_settings['require_manual_confirmation'] ?? true);
 
         try {
+            if ($requiresConfirmation) {
+                $bookingRequest = $this->booking->createBookingRequest($business, [
+                    'client_id' => $client->id,
+                    'service_id' => $service->id,
+                    'professional_id' => $attributes['professional_id'],
+                    'starts_at' => $startsAt,
+                    'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+                    'source_reference' => $this->publicSourceReference($business, $attributes),
+                    'source_metadata' => [
+                        'client_email' => $attributes['client_email'] ?? null,
+                        'client_phone' => $attributes['client_phone'] ?? null,
+                    ],
+                    'notes' => $attributes['notes'] ?? null,
+                ]);
+
+                return redirect()->route('public-booking.request-confirmation', [$business->slug, 'bookingRequest' => $bookingRequest->id]);
+            }
+
             $appointment = $this->booking->createAppointment($business, [
                 'client_id' => $client->id,
                 'service_id' => $service->id,
                 'professional_id' => $attributes['professional_id'],
                 'starts_at' => $startsAt,
-                'status' => $requiresConfirmation ? 'scheduled' : 'confirmed',
+                'status' => Appointment::STATUS_CONFIRMED,
                 'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
                 'source_reference' => $this->publicSourceReference($business, $attributes),
                 'source_metadata' => [
@@ -105,6 +124,20 @@ class PublicBookingController extends Controller
         return redirect()->route('public-booking.confirmation', [$business->slug, 'appointment' => $appointment->id]);
     }
 
+    public function requestConfirmation(Business $business, BookingRequest $bookingRequest): View
+    {
+        abort_unless($this->publicBookingEnabled($business), 404);
+        abort_unless($bookingRequest->business_id === $business->id, 404);
+
+        $bookingRequest->load(['client', 'professional', 'service']);
+
+        return view('public-booking.confirmation', [
+            'business' => $business,
+            'appointment' => null,
+            'bookingRequest' => $bookingRequest,
+        ]);
+    }
+
     public function confirmation(Business $business, int $appointment): View
     {
         abort_unless($this->publicBookingEnabled($business), 404);
@@ -117,6 +150,7 @@ class PublicBookingController extends Controller
         return view('public-booking.confirmation', [
             'business' => $business,
             'appointment' => $appointment,
+            'bookingRequest' => null,
         ]);
     }
 

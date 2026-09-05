@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminWhatsAppController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingRequestController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
@@ -46,6 +47,7 @@ Route::get('/', function () {
 
 Route::get('/reservar/{business:slug}', [PublicBookingController::class, 'show'])->name('public-booking.show');
 Route::post('/reservar/{business:slug}', [PublicBookingController::class, 'store'])->name('public-booking.store');
+Route::get('/reservar/{business:slug}/solicitud/{bookingRequest}', [PublicBookingController::class, 'requestConfirmation'])->name('public-booking.request-confirmation');
 Route::get('/reservar/{business:slug}/confirmacion/{appointment}', [PublicBookingController::class, 'confirmation'])->name('public-booking.confirmation');
 Route::get('/webhooks/meta/whatsapp', [MetaWhatsAppWebhookController::class, 'verify'])->name('webhooks.meta.whatsapp.verify');
 Route::post('/webhooks/meta/whatsapp', [MetaWhatsAppWebhookController::class, 'receive'])->name('webhooks.meta.whatsapp.receive');
@@ -89,6 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/onboarding/{step}', [OnboardingController::class, 'store'])->name('onboarding.store');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
+        Route::patch('/solicitudes-reserva/{bookingRequest}/aceptar', [BookingRequestController::class, 'accept'])->name('booking-requests.accept');
+        Route::patch('/solicitudes-reserva/{bookingRequest}/rechazar', [BookingRequestController::class, 'reject'])->name('booking-requests.reject');
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class);

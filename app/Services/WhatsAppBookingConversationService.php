@@ -125,16 +125,28 @@ class WhatsAppBookingConversationService
         $startsAt = CarbonImmutable::parse($data['date'].' '.$time, $business->timezone);
 
         try {
-            $appointment = $this->booking->createAppointment($business, [
-                'client_id' => $client->id,
-                'service_id' => $data['service_id'],
-                'professional_id' => $data['professional_id'],
-                'starts_at' => $startsAt,
-                'status' => $settings['appointment_status'] ?? 'scheduled',
-                'source_channel' => Appointment::SOURCE_WHATSAPP,
-                'source_reference' => 'conversation:'.$conversation->id,
-                'source_metadata' => ['simulated' => ! str_starts_with($settings['mode'] ?? 'link', 'cloud_api')],
-            ]);
+            if (($settings['appointment_status'] ?? Appointment::STATUS_SCHEDULED) === Appointment::STATUS_CONFIRMED) {
+                $appointment = $this->booking->createAppointment($business, [
+                    'client_id' => $client->id,
+                    'service_id' => $data['service_id'],
+                    'professional_id' => $data['professional_id'],
+                    'starts_at' => $startsAt,
+                    'status' => Appointment::STATUS_CONFIRMED,
+                    'source_channel' => Appointment::SOURCE_WHATSAPP,
+                    'source_reference' => 'conversation:'.$conversation->id,
+                    'source_metadata' => ['simulated' => ! str_starts_with($settings['mode'] ?? 'link', 'cloud_api')],
+                ]);
+            } else {
+                $bookingRequest = $this->booking->createBookingRequest($business, [
+                    'client_id' => $client->id,
+                    'service_id' => $data['service_id'],
+                    'professional_id' => $data['professional_id'],
+                    'starts_at' => $startsAt,
+                    'source_channel' => Appointment::SOURCE_WHATSAPP,
+                    'source_reference' => 'conversation:'.$conversation->id,
+                    'source_metadata' => ['simulated' => ! str_starts_with($settings['mode'] ?? 'link', 'cloud_api')],
+                ]);
+            }
         } catch (ValidationException) {
             $alternatives = $this->booking->alternativeSlots(
                 $business,
@@ -157,13 +169,18 @@ class WhatsAppBookingConversationService
         }
 
         $conversation->update([
-            'appointment_id' => $appointment->id,
+            'appointment_id' => $appointment->id ?? null,
             'status' => Conversation::STATUS_CLOSED,
             'current_step' => 'completed',
         ]);
         $this->conversations->updateState($conversation, 'completed', [
-            'appointment_id' => $appointment->id,
+            'appointment_id' => $appointment->id ?? null,
+            'booking_request_id' => $bookingRequest->id ?? null,
         ]);
+
+        if (isset($bookingRequest)) {
+            return "Listo, tu solicitud quedo recibida. El negocio revisara y confirmara la cita.\n\nServicio: {$bookingRequest->service->name}\nFecha: ".$bookingRequest->starts_at->format('d/m/Y')."\nHora: ".$bookingRequest->starts_at->format('H:i')."\nProfesional: {$bookingRequest->professional->name}";
+        }
 
         return $settings['confirmation_message']."\n\nServicio: {$appointment->service->name}\nFecha: ".$appointment->starts_at->format('d/m/Y')."\nHora: ".$appointment->starts_at->format('H:i')."\nProfesional: {$appointment->professional->name}";
     }

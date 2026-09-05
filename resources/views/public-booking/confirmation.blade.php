@@ -11,19 +11,25 @@
     @endif
 </head>
 <body class="min-h-screen bg-[#f6f7f4] font-sans text-[#18211f] antialiased">
+    @php
+        $reservation = $bookingRequest ?? $appointment;
+        $isRequest = (bool) $bookingRequest;
+    @endphp
     <main class="mx-auto flex min-h-screen max-w-3xl items-center px-5 py-8 sm:px-8">
         <section class="trebbia-card w-full p-8">
-            <p class="text-sm font-bold text-[#245f57]">Reserva recibida</p>
+            <p class="text-sm font-bold text-[#245f57]">{{ $isRequest ? 'Solicitud recibida' : 'Reserva confirmada' }}</p>
             <h1 class="mt-3 text-3xl font-bold">{{ $business->name }}</h1>
-            <p class="mt-3 text-[#64716d]">Tu solicitud de cita fue registrada correctamente.</p>
+            <p class="mt-3 text-[#64716d]">
+                {{ $isRequest ? 'El negocio revisara tu solicitud y confirmara la cita.' : 'Tu cita fue registrada correctamente.' }}
+            </p>
 
             <div class="mt-6 grid gap-3 rounded-md border border-[#e1e6e0] bg-[#f8faf8] p-5 text-sm text-[#53615d]">
-                <p><span class="font-bold text-[#18211f]">Cliente:</span> {{ $appointment->client?->name }}</p>
-                <p><span class="font-bold text-[#18211f]">Servicio:</span> {{ $appointment->service?->name }}</p>
-                <p><span class="font-bold text-[#18211f]">Profesional:</span> {{ $appointment->professional?->name }}</p>
-                <p><span class="font-bold text-[#18211f]">Fecha:</span> {{ $appointment->starts_at->format('d/m/Y') }}</p>
-                <p><span class="font-bold text-[#18211f]">Hora:</span> {{ $appointment->starts_at->format('H:i') }} - {{ $appointment->ends_at->format('H:i') }}</p>
-                <p><span class="font-bold text-[#18211f]">Estado:</span> {{ $appointment->status === 'confirmed' ? 'Confirmada' : 'Pendiente de confirmacion' }}</p>
+                <p><span class="font-bold text-[#18211f]">Cliente:</span> {{ $reservation->client?->name }}</p>
+                <p><span class="font-bold text-[#18211f]">Servicio:</span> {{ $reservation->service?->name }}</p>
+                <p><span class="font-bold text-[#18211f]">Profesional:</span> {{ $reservation->professional?->name }}</p>
+                <p><span class="font-bold text-[#18211f]">Fecha:</span> {{ $reservation->starts_at->format('d/m/Y') }}</p>
+                <p><span class="font-bold text-[#18211f]">Hora:</span> {{ $reservation->starts_at->format('H:i') }} - {{ $reservation->ends_at->format('H:i') }}</p>
+                <p><span class="font-bold text-[#18211f]">Estado:</span> {{ $isRequest ? 'Pendiente de aprobacion' : 'Confirmada' }}</p>
             </div>
 
             <div class="mt-6 flex flex-col gap-3 sm:flex-row">

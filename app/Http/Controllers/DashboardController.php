@@ -15,6 +15,7 @@ class DashboardController extends Controller
             'metrics' => [
                 'todayAppointments' => $business->appointments()->whereDate('starts_at', today())->count(),
                 'upcomingAppointments' => $business->appointments()->where('starts_at', '>=', now())->count(),
+                'pendingRequests' => $business->bookingRequests()->where('status', 'pending')->count(),
                 'clients' => $business->clients()->count(),
                 'professionals' => $business->professionals()->where('is_active', true)->count(),
                 'services' => $business->services()->where('is_active', true)->count(),
@@ -23,6 +24,12 @@ class DashboardController extends Controller
             'upcomingAppointments' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())
+                ->orderBy('starts_at')
+                ->take(5)
+                ->get(),
+            'pendingBookingRequests' => $business->bookingRequests()
+                ->with(['client', 'professional', 'service'])
+                ->where('status', 'pending')
                 ->orderBy('starts_at')
                 ->take(5)
                 ->get(),

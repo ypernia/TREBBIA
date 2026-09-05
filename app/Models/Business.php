@@ -86,6 +86,11 @@ class Business extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function bookingRequests()
+    {
+        return $this->hasMany(BookingRequest::class);
+    }
+
     public function whatsappContacts()
     {
         return $this->hasMany(WhatsAppContact::class);

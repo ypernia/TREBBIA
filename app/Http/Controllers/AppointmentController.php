@@ -51,6 +51,14 @@ class AppointmentController extends Controller
             'weekDays' => collect(range(0, 6))->map(fn (int $days) => $weekStart->addDays($days)),
             'appointments' => $appointments,
             'appointmentsByDay' => $appointments->groupBy(fn (Appointment $appointment) => $appointment->starts_at->toDateString()),
+            'pendingBookingRequests' => $business->bookingRequests()
+                ->with(['client', 'professional', 'service'])
+                ->where('status', 'pending')
+                ->where('starts_at', '>=', now())
+                ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
+                ->orderBy('starts_at')
+                ->take(8)
+                ->get(),
             'upcoming' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())

@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\AppointmentReminder;
 use App\Models\AppointmentSlotLock;
 use App\Models\BlockedTime;
+use App\Models\BookingRequest;
 use App\Models\Business;
 use App\Models\BusinessInvitation;
 use App\Models\BusinessSchedule;
@@ -1494,12 +1495,18 @@ class TrebbiaFlowTest extends TestCase
             'name' => 'Cliente Web',
             'email' => 'clienteweb@example.com',
         ]);
-        $this->assertDatabaseHas('appointments', [
+        $this->assertDatabaseHas('booking_requests', [
             'business_id' => $business->id,
             'professional_id' => $professional->id,
             'service_id' => $service->id,
-            'status' => 'scheduled',
+            'status' => BookingRequest::STATUS_PENDING,
             'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+        ]);
+        $this->assertDatabaseMissing('appointments', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'service_id' => $service->id,
+            'starts_at' => '2026-09-07 09:00:00',
         ]);
     }
 
@@ -1562,8 +1569,108 @@ class TrebbiaFlowTest extends TestCase
         $this->post(route('public-booking.store', $business->slug), $payload)->assertRedirect();
         $this->post(route('public-booking.store', $business->slug), $payload)->assertRedirect();
 
-        $this->assertSame(1, $business->appointments()->where('starts_at', '2026-09-07 10:00:00')->count());
-        $this->assertDatabaseCount('appointment_slot_locks', 1);
+        $this->assertSame(1, $business->bookingRequests()->where('starts_at', '2026-09-07 10:00:00')->count());
+        $this->assertSame(0, $business->appointments()->where('starts_at', '2026-09-07 10:00:00')->count());
+        $this->assertDatabaseCount('appointment_slot_locks', 0);
+    }
+
+    public function test_pending_booking_request_can_be_accepted_into_confirmed_appointment(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => true,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta pendiente', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Pendiente', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $this->post(route('public-booking.store', $business->slug), [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+            'starts_at' => '11:00',
+            'client_name' => 'Cliente Por Aprobar',
+            'client_email' => 'aprobar@example.com',
+        ])->assertRedirect();
+
+        $bookingRequest = $business->bookingRequests()->firstOrFail();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Requiere tu atencion')
+            ->assertSee('Cliente Por Aprobar');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('booking-requests.accept', $bookingRequest))
+            ->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+
+        $this->assertDatabaseHas('booking_requests', [
+            'id' => $bookingRequest->id,
+            'status' => BookingRequest::STATUS_ACCEPTED,
+            'decided_by' => $user->id,
+        ]);
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'service_id' => $service->id,
+            'status' => Appointment::STATUS_CONFIRMED,
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+        ]);
+    }
+
+    public function test_accepting_booking_request_revalidates_availability_before_creating_appointment(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => true,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta revalidada', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Revalida', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $bookingRequest = app(BookingEngine::class)->createBookingRequest($business, [
+            'client_id' => $business->clients()->create(['name' => 'Cliente Espera', 'is_active' => true])->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => CarbonImmutable::parse('2026-09-07 09:00', $business->timezone),
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+            'source_reference' => 'public:espera',
+        ]);
+        app(BookingEngine::class)->createAppointment($business, [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => CarbonImmutable::parse('2026-09-07 09:00', $business->timezone),
+            'status' => Appointment::STATUS_CONFIRMED,
+            'source_channel' => Appointment::SOURCE_INTERNAL,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('booking-requests.accept', $bookingRequest))
+            ->assertRedirect()
+            ->assertSessionHasErrors('booking_request');
+
+        $this->assertDatabaseHas('booking_requests', [
+            'id' => $bookingRequest->id,
+            'status' => BookingRequest::STATUS_PENDING,
+            'appointment_id' => null,
+        ]);
+        $this->assertSame(1, $business->appointments()->where('starts_at', '2026-09-07 09:00:00')->count());
     }
 
     public function test_booking_engine_returns_available_slots_and_respects_blocked_times(): void
@@ -1736,12 +1843,18 @@ class TrebbiaFlowTest extends TestCase
                 ->assertRedirect();
         }
 
-        $this->assertDatabaseHas('appointments', [
+        $this->assertDatabaseHas('booking_requests', [
             'business_id' => $business->id,
             'service_id' => $service->id,
             'professional_id' => $professional->id,
             'source_channel' => Appointment::SOURCE_WHATSAPP,
-            'status' => 'scheduled',
+            'status' => BookingRequest::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseMissing('appointments', [
+            'business_id' => $business->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'source_channel' => Appointment::SOURCE_WHATSAPP,
         ]);
         $this->assertDatabaseHas('conversation_states', [
             'business_id' => $business->id,
@@ -1814,12 +1927,13 @@ class TrebbiaFlowTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('appointments', [
+        $this->assertDatabaseHas('booking_requests', [
             'business_id' => $business->id,
             'service_id' => $service->id,
             'professional_id' => $professional->id,
             'starts_at' => '2026-09-07 10:00:00',
             'source_channel' => Appointment::SOURCE_WHATSAPP,
+            'status' => BookingRequest::STATUS_PENDING,
         ]);
     }
 

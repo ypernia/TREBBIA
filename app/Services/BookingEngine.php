@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\AppointmentSlotLock;
+use App\Models\BookingRequest;
 use App\Models\Business;
 use App\Models\Client;
 use App\Models\Service;
@@ -200,6 +201,124 @@ class BookingEngine
                 'notes' => $attributes['notes'] ?? null,
             ]);
         });
+    }
+
+    public function createBookingRequest(Business $business, array $attributes): BookingRequest
+    {
+        if (! $this->entitlements->can($business, 'appointment.create')) {
+            throw ValidationException::withMessages(['plan' => 'Tu membresia no permite recibir solicitudes de reserva en este momento.']);
+        }
+
+        $service = $business->services()->where('is_active', true)->findOrFail($attributes['service_id']);
+        $startsAt = $attributes['starts_at'] instanceof CarbonImmutable
+            ? $attributes['starts_at']
+            : CarbonImmutable::parse($attributes['starts_at'], $business->timezone);
+        $endsAt = $startsAt->addMinutes($service->duration_minutes);
+        $professionalId = (int) $attributes['professional_id'];
+        $resourceId = ($attributes['resource_id'] ?? null) ? (int) $attributes['resource_id'] : null;
+        $clientId = ($attributes['client_id'] ?? null) ? (int) $attributes['client_id'] : null;
+        $branchId = ($attributes['branch_id'] ?? null) ? (int) $attributes['branch_id'] : null;
+        $sourceChannel = $attributes['source_channel'] ?? Appointment::SOURCE_PUBLIC_BOOKING;
+        $idempotencyKey = $attributes['idempotency_key'] ?? $this->idempotencyKey($business, $attributes, $sourceChannel);
+
+        if ($idempotencyKey) {
+            $existingRequest = $business->bookingRequests()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existingRequest) {
+                return $existingRequest;
+            }
+        }
+
+        $business->professionals()->where('is_active', true)->findOrFail($professionalId);
+
+        if ($clientId) {
+            $business->clients()->findOrFail($clientId);
+        }
+
+        if ($resourceId) {
+            $business->resources()->where('is_active', true)->findOrFail($resourceId);
+        }
+
+        if ($branchId) {
+            $business->branches()->where('is_active', true)->findOrFail($branchId);
+        }
+
+        $errors = $this->availability->validate($business, $service, $startsAt, $endsAt, $professionalId, $resourceId);
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['starts_at' => $errors]);
+        }
+
+        return $business->bookingRequests()->create([
+            'branch_id' => $branchId ?: $business->branches()->where('is_main', true)->value('id'),
+            'client_id' => $clientId,
+            'service_id' => $service->id,
+            'professional_id' => $professionalId,
+            'resource_id' => $resourceId,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'status' => BookingRequest::STATUS_PENDING,
+            'source_channel' => $sourceChannel,
+            'source_reference' => $attributes['source_reference'] ?? null,
+            'idempotency_key' => $idempotencyKey,
+            'source_metadata' => $attributes['source_metadata'] ?? null,
+            'notes' => $attributes['notes'] ?? null,
+            'requested_at' => now(),
+        ]);
+    }
+
+    public function approveBookingRequest(BookingRequest $bookingRequest, int $userId, ?string $notes = null): Appointment
+    {
+        if ($bookingRequest->status !== BookingRequest::STATUS_PENDING) {
+            throw ValidationException::withMessages(['booking_request' => 'Esta solicitud ya fue gestionada.']);
+        }
+
+        return DB::transaction(function () use ($bookingRequest, $userId, $notes): Appointment {
+            $appointment = $this->createAppointment($bookingRequest->business, [
+                'branch_id' => $bookingRequest->branch_id,
+                'client_id' => $bookingRequest->client_id,
+                'service_id' => $bookingRequest->service_id,
+                'professional_id' => $bookingRequest->professional_id,
+                'resource_id' => $bookingRequest->resource_id,
+                'starts_at' => CarbonImmutable::parse($bookingRequest->starts_at, $bookingRequest->business->timezone),
+                'status' => Appointment::STATUS_CONFIRMED,
+                'source_channel' => $bookingRequest->source_channel,
+                'source_reference' => 'booking_request:'.$bookingRequest->id,
+                'source_metadata' => [
+                    ...($bookingRequest->source_metadata ?? []),
+                    'booking_request_id' => $bookingRequest->id,
+                ],
+                'notes' => $bookingRequest->notes,
+            ]);
+
+            $bookingRequest->update([
+                'appointment_id' => $appointment->id,
+                'status' => BookingRequest::STATUS_ACCEPTED,
+                'decided_at' => now(),
+                'decided_by' => $userId,
+                'decision_notes' => $notes,
+            ]);
+
+            return $appointment;
+        });
+    }
+
+    public function rejectBookingRequest(BookingRequest $bookingRequest, int $userId, ?string $notes = null): BookingRequest
+    {
+        if ($bookingRequest->status !== BookingRequest::STATUS_PENDING) {
+            throw ValidationException::withMessages(['booking_request' => 'Esta solicitud ya fue gestionada.']);
+        }
+
+        $bookingRequest->update([
+            'status' => BookingRequest::STATUS_REJECTED,
+            'decided_at' => now(),
+            'decided_by' => $userId,
+            'decision_notes' => $notes,
+        ]);
+
+        return $bookingRequest->refresh();
     }
 
     public function findOrCreateClient(Business $business, array $attributes): Client
