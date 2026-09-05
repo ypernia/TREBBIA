@@ -11,6 +11,7 @@ use App\Models\BusinessSchedule;
 use App\Models\BusinessUser;
 use App\Models\Client;
 use App\Models\ClinicalRecord;
+use App\Models\ManualPayment;
 use App\Models\Plan;
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
@@ -1200,6 +1201,59 @@ class TrebbiaFlowTest extends TestCase
             'business_id' => $business->id,
             'action' => 'subscription.updated',
             'reason' => 'Pago confirmado manualmente',
+        ]);
+    }
+
+    public function test_superadmin_can_register_manual_payment_and_activate_subscription(): void
+    {
+        [, $business] = $this->tenantUser();
+        $superadmin = User::factory()->create([
+            'email' => 'payments@trebbia.app',
+            'platform_role' => 'superadmin',
+            'platform_permissions' => ['*'],
+            'platform_access_enabled_at' => now(),
+        ]);
+        $plan = Plan::where('code', 'professional')->firstOrFail();
+        $subscription = $business->subscription()->firstOrFail();
+
+        $this->actingAs($superadmin)
+            ->get(route('admin.payments.index'))
+            ->assertOk()
+            ->assertSee('Pagos manuales');
+
+        $this->actingAs($superadmin)
+            ->post(route('admin.payments.store'), [
+                'business_id' => $business->id,
+                'plan_id' => $plan->id,
+                'amount' => 99000,
+                'currency' => 'COP',
+                'period_months' => 1,
+                'payment_method' => 'bank_transfer',
+                'reference' => 'TRX-1001',
+                'paid_at' => now()->format('Y-m-d H:i:s'),
+                'notes' => 'Pago confirmado por transferencia',
+            ])
+            ->assertRedirect(route('admin.payments.index'));
+
+        $this->assertDatabaseHas('manual_payments', [
+            'business_id' => $business->id,
+            'subscription_id' => $subscription->id,
+            'plan_id' => $plan->id,
+            'recorded_by' => $superadmin->id,
+            'amount_cents' => 9900000,
+            'status' => ManualPayment::STATUS_CONFIRMED,
+            'reference' => 'TRX-1001',
+        ]);
+        $this->assertDatabaseHas('subscriptions', [
+            'business_id' => $business->id,
+            'plan_id' => $plan->id,
+            'status' => Subscription::STATUS_ACTIVE,
+        ]);
+        $this->assertDatabaseHas('platform_audit_logs', [
+            'user_id' => $superadmin->id,
+            'business_id' => $business->id,
+            'action' => 'manual_payment.confirmed',
+            'reason' => 'Pago confirmado por transferencia',
         ]);
     }
 

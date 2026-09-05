@@ -12,6 +12,7 @@
             'Suscripciones activas' => $metrics['activeSubscriptions'],
             'Trials expirados' => $metrics['expiredSubscriptions'],
             'Solicitudes WhatsApp' => $metrics['whatsappRequests'],
+            'Ingresos manuales' => '$'.number_format($metrics['manualRevenueCents'] / 100, 0, ',', '.'),
         ] as $label => $value)
             <section class="trebbia-card p-5">
                 <p class="text-sm font-bold text-[#64748b]">{{ $label }}</p>
@@ -29,7 +30,7 @@
                 @forelse ($recentBusinesses as $business)
                     <div class="p-5">
                         <p class="font-bold">{{ $business->name }}</p>
-                        <p class="mt-1 text-sm text-[#64748b]">{{ $business->owner?->email }} · {{ $business->subscription?->status ?? 'sin suscripcion' }}</p>
+                        <p class="mt-1 text-sm text-[#64748b]">{{ $business->owner?->email }} - {{ $business->subscription?->status ?? 'sin suscripcion' }}</p>
                     </div>
                 @empty
                     <p class="p-5 text-sm text-[#64748b]">Sin negocios registrados.</p>
@@ -45,7 +46,7 @@
                 @forelse ($recentSubscriptions as $subscription)
                     <div class="p-5">
                         <p class="font-bold">{{ $subscription->business?->name }}</p>
-                        <p class="mt-1 text-sm text-[#64748b]">{{ $subscription->status }} · {{ $subscription->plan?->name ?? 'Trial sin plan' }}</p>
+                        <p class="mt-1 text-sm text-[#64748b]">{{ $subscription->status }} - {{ $subscription->plan?->name ?? 'Trial sin plan' }}</p>
                     </div>
                 @empty
                     <p class="p-5 text-sm text-[#64748b]">Sin suscripciones registradas.</p>
@@ -53,4 +54,23 @@
             </div>
         </section>
     </div>
+
+    <section class="trebbia-card mt-6 overflow-hidden">
+        <div class="border-b border-[#e7ebe7] p-5">
+            <h2 class="text-lg font-bold">Pagos recientes</h2>
+        </div>
+        <div class="divide-y divide-[#e7ebe7]">
+            @forelse ($recentPayments as $payment)
+                <div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="font-bold">{{ $payment->business?->name }}</p>
+                        <p class="text-sm text-[#64748b]">{{ $payment->plan?->name }} - {{ $payment->payment_method }}</p>
+                    </div>
+                    <p class="font-bold">${{ number_format($payment->amount_cents / 100, 0, ',', '.') }} {{ $payment->currency }}</p>
+                </div>
+            @empty
+                <p class="p-5 text-sm text-[#64748b]">Sin pagos manuales registrados.</p>
+            @endforelse
+        </div>
+    </section>
 @endsection

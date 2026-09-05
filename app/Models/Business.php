@@ -136,6 +136,11 @@ class Business extends Model
         return $this->hasMany(SubscriptionEvent::class);
     }
 
+    public function manualPayments()
+    {
+        return $this->hasMany(ManualPayment::class);
+    }
+
     public function settings()
     {
         return $this->hasOne(BusinessSettings::class);

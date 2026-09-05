@@ -52,6 +52,11 @@ class Subscription extends Model
         return $this->belongsTo(Plan::class);
     }
 
+    public function manualPayments()
+    {
+        return $this->hasMany(ManualPayment::class);
+    }
+
     public function isTrialing(): bool
     {
         return $this->status === self::STATUS_TRIALING && $this->trial_ends_at?->isFuture();

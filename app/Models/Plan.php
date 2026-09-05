@@ -34,4 +34,9 @@ class Plan extends Model
     {
         return $this->hasMany(Subscription::class);
     }
+
+    public function manualPayments()
+    {
+        return $this->hasMany(ManualPayment::class);
+    }
 }

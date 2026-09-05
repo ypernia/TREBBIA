@@ -4,6 +4,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Admin\AdminAuditController;
 use App\Http\Controllers\Admin\AdminBusinessController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminManualPaymentController;
 use App\Http\Controllers\Admin\AdminPlanController;
 use App\Http\Controllers\Admin\AdminSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -72,6 +73,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
             Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
             Route::patch('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update'])->name('subscriptions.update');
+            Route::get('/payments', [AdminManualPaymentController::class, 'index'])->name('payments.index');
+            Route::post('/payments', [AdminManualPaymentController::class, 'store'])->name('payments.store');
             Route::get('/plans', [AdminPlanController::class, 'index'])->name('plans.index');
             Route::get('/whatsapp', AdminWhatsAppController::class)->name('whatsapp.index');
             Route::get('/audit', AdminAuditController::class)->name('audit.index');

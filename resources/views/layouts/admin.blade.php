@@ -17,6 +17,7 @@
             ['label' => 'Businesses', 'href' => route('admin.businesses.index'), 'active' => request()->routeIs('admin.businesses.*')],
             ['label' => 'Usuarios', 'href' => route('admin.users.index'), 'active' => request()->routeIs('admin.users.*')],
             ['label' => 'Suscripciones', 'href' => route('admin.subscriptions.index'), 'active' => request()->routeIs('admin.subscriptions.*')],
+            ['label' => 'Pagos', 'href' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments.*')],
             ['label' => 'Planes', 'href' => route('admin.plans.index'), 'active' => request()->routeIs('admin.plans.*')],
             ['label' => 'WhatsApp', 'href' => route('admin.whatsapp.index'), 'active' => request()->routeIs('admin.whatsapp.*')],
             ['label' => 'Auditoria', 'href' => route('admin.audit.index'), 'active' => request()->routeIs('admin.audit.*')],
