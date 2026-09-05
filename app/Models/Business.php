@@ -131,6 +131,11 @@ class Business extends Model
         return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
+    public function subscriptionEvents()
+    {
+        return $this->hasMany(SubscriptionEvent::class);
+    }
+
     public function settings()
     {
         return $this->hasOne(BusinessSettings::class);

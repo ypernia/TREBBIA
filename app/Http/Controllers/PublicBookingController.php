@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Business;
 use App\Services\BookingEngine;
+use App\Services\SubscriptionManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,8 +98,10 @@ class PublicBookingController extends Controller
     private function publicBookingEnabled(Business $business): bool
     {
         $settings = $business->settings()->firstOrCreate([]);
+        $subscription = app(SubscriptionManager::class)->ensure($business);
 
         return $business->status === 'active'
+            && $subscription->hasOperationalAccess()
             && (bool) ($settings->public_booking_settings['allow_public_booking'] ?? false);
     }
 }

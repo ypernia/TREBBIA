@@ -71,6 +71,17 @@
                 @if (session('status'))
                     <div class="mb-5 rounded-md border border-[#cfe4da] bg-[#edf7f4] px-4 py-3 text-sm font-semibold text-[#245f57]">{{ session('status') }}</div>
                 @endif
+                @if (($activeSubscription ?? null)?->isTrialing())
+                    <div class="mb-5 rounded-md border border-[#cfe4da] bg-[#f2faf7] px-4 py-3 text-sm text-[#245f57]">
+                        <span class="font-bold">Periodo de prueba:</span>
+                        te quedan {{ $activeSubscription->trialDaysRemaining() }} dia(s). Al terminar, selecciona una membresia paga para continuar operando.
+                    </div>
+                @elseif (($activeSubscription ?? null)?->isExpired())
+                    <div class="mb-5 rounded-md border border-[#f0c9c4] bg-[#fff4f2] px-4 py-3 text-sm text-[#8a3027]">
+                        <span class="font-bold">Acceso operativo pausado:</span>
+                        selecciona una membresia para continuar utilizando TREBBIA.
+                    </div>
+                @endif
                 @yield('content')
             </section>
         </main>

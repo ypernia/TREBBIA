@@ -53,7 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/empresa/nueva', [BusinessSetupController::class, 'create'])->name('business.create');
     Route::post('/empresa/nueva', [BusinessSetupController::class, 'store'])->name('business.store');
 
-    Route::middleware('business')->group(function () {
+    Route::middleware(['business', 'subscription'])->group(function () {
         Route::get('/onboarding/{step?}', [OnboardingController::class, 'show'])->name('onboarding.show');
         Route::post('/onboarding/{step}', [OnboardingController::class, 'store'])->name('onboarding.store');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');

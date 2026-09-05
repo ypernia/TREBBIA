@@ -7,7 +7,7 @@
         <div class="w-full max-w-2xl">
             <p class="text-sm font-bold text-[#245f57]">Paso inicial</p>
             <h1 class="mt-2 text-3xl font-bold">Crea tu empresa</h1>
-            <p class="mt-2 text-[#64716d]">Este negocio sera el tenant principal donde se aislaran clientes, servicios, agenda y equipo.</p>
+            <p class="mt-2 text-[#64716d]">Este negocio sera el espacio principal de clientes, servicios, agenda y equipo. Iniciara con una prueba gratuita de 14 dias.</p>
             <div class="trebbia-card mt-6 p-6">
                 @include('partials.errors')
                 <form method="POST" action="{{ route('business.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2">

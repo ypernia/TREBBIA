@@ -637,8 +637,9 @@ class TrebbiaFlowTest extends TestCase
         $plan = Plan::create([
             'name' => 'Limitado',
             'code' => 'limited',
-            'monthly_price_cents' => 0,
+            'monthly_price_cents' => 10000,
             'limits' => ['users' => 1],
+            'entitlements' => ['team.manage' => true],
             'features' => [],
             'is_active' => true,
         ]);
@@ -1099,19 +1100,20 @@ class TrebbiaFlowTest extends TestCase
             ->get(route('membership.index'))
             ->assertOk()
             ->assertSee('Membresia')
-            ->assertSee('Inicial')
-            ->assertSee('Profesional')
+            ->assertSee('Prueba gratuita')
+            ->assertSee('TREBBIA Esencial')
+            ->assertSee('TREBBIA Profesional')
             ->assertSee('Citas mensuales')
-            ->assertSee('1 / 50');
+            ->assertSee('Uso: 1 de 120');
 
-        $this->assertDatabaseHas('plans', ['code' => 'starter']);
+        $this->assertDatabaseHas('plans', ['code' => 'essential']);
         $this->assertDatabaseHas('subscriptions', [
             'business_id' => $business->id,
             'status' => 'trialing',
         ]);
     }
 
-    public function test_membership_plan_can_be_changed_manually(): void
+    public function test_membership_plan_can_be_requested_without_granting_free_active_access(): void
     {
         [$user, $business] = $this->tenantUser();
 
@@ -1126,13 +1128,17 @@ class TrebbiaFlowTest extends TestCase
             ->withSession(['business_id' => $business->id])
             ->put(route('membership.update'), [
                 'plan_id' => $plan->id,
-                'status' => 'active',
             ])->assertRedirect(route('membership.index'));
 
         $this->assertDatabaseHas('subscriptions', [
             'business_id' => $business->id,
             'plan_id' => $plan->id,
-            'status' => 'active',
+            'status' => 'trialing',
+        ]);
+        $this->assertDatabaseHas('subscription_events', [
+            'business_id' => $business->id,
+            'to_plan_id' => $plan->id,
+            'reason' => 'plan_requested',
         ]);
     }
 

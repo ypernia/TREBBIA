@@ -13,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class BookingEngine
 {
-    public function __construct(private AppointmentAvailabilityService $availability) {}
+    public function __construct(
+        private AppointmentAvailabilityService $availability,
+        private PlanEntitlements $entitlements,
+    ) {}
 
     public function services(Business $business): Collection
     {
@@ -114,6 +117,14 @@ class BookingEngine
 
     public function createAppointment(Business $business, array $attributes): Appointment
     {
+        if (! $this->entitlements->can($business, 'appointment.create')) {
+            throw ValidationException::withMessages(['plan' => 'Tu membresia no permite crear citas en este momento.']);
+        }
+
+        if (! $this->entitlements->hasCapacity($business, 'monthly_appointments')) {
+            throw ValidationException::withMessages(['plan' => 'Alcanzaste el limite de citas mensuales de tu membresia.']);
+        }
+
         return DB::transaction(function () use ($business, $attributes): Appointment {
             $service = $business->services()->where('is_active', true)->findOrFail($attributes['service_id']);
             $startsAt = $attributes['starts_at'] instanceof CarbonImmutable

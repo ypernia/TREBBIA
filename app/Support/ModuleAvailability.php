@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Business;
+use App\Services\PlanEntitlements;
 
 class ModuleAvailability
 {
@@ -11,6 +12,12 @@ class ModuleAvailability
         $module = config("trebbia.modules.{$moduleKey}");
 
         if (! $module || ! $business) {
+            return false;
+        }
+
+        $entitlement = $module['entitlement'] ?? null;
+
+        if ($entitlement && ! app(PlanEntitlements::class)->can($business, $entitlement)) {
             return false;
         }
 

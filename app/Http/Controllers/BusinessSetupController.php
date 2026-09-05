@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Business;
 use App\Models\BusinessSettings;
 use App\Models\BusinessUser;
+use App\Services\SubscriptionManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -51,6 +52,7 @@ class BusinessSetupController extends Controller
         ]);
 
         BusinessSettings::create(['business_id' => $business->id]);
+        app(SubscriptionManager::class)->ensure($business);
 
         $request->session()->put('business_id', $business->id);
 

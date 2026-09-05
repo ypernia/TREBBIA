@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plan;
+use App\Models\Subscription;
+use App\Services\PlanCatalog;
+use App\Services\PlanEntitlements;
+use App\Services\SubscriptionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -10,13 +14,19 @@ use Illuminate\View\View;
 
 class MembershipController extends Controller
 {
+    public function __construct(
+        private PlanCatalog $plans,
+        private PlanEntitlements $entitlements,
+        private SubscriptionManager $subscriptions,
+    ) {}
+
     public function index(): View
     {
         $business = app('activeBusiness');
-        $plans = $this->ensurePlans();
-        $subscription = $this->ensureSubscription($plans->firstWhere('code', 'starter'));
+        $plans = $this->plans->sync();
+        $subscription = $this->subscriptions->ensure($business);
         $currentPlan = $subscription->plan;
-        $usage = $this->usage();
+        $usage = $this->entitlements->usage($business);
 
         return view('membership.index', [
             'business' => $business,
@@ -24,100 +34,65 @@ class MembershipController extends Controller
             'subscription' => $subscription,
             'currentPlan' => $currentPlan,
             'usage' => $usage,
-            'limits' => $this->limits($currentPlan, $usage),
+            'limits' => $this->limits($subscription, $usage),
+            'planLimits' => fn (Plan $plan): array => $this->limitsForPlan($plan, $usage),
+            'trialDays' => (int) config('trebbia.trial.days', 14),
             'statusLabels' => $this->statusLabels(),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        $plans = $this->ensurePlans();
+        $plans = $this->plans->sync();
         $attributes = $request->validate([
             'plan_id' => ['required', Rule::exists('plans', 'id')->where('is_active', true)],
-            'status' => ['required', Rule::in(array_keys($this->statusLabels()))],
         ]);
 
         abort_unless($plans->contains('id', (int) $attributes['plan_id']), 404);
 
-        $this->ensureSubscription($plans->first())->update([
-            'plan_id' => $attributes['plan_id'],
-            'status' => $attributes['status'],
-            'current_period_ends_at' => now()->addMonth(),
-        ]);
+        $subscription = $this->subscriptions->ensure(app('activeBusiness'));
+        $this->subscriptions->requestPlan($subscription, $plans->firstWhere('id', (int) $attributes['plan_id']));
 
-        return redirect()->route('membership.index')->with('status', 'Membresia actualizada.');
+        return redirect()->route('membership.index')->with('status', 'Membresia solicitada. La activacion queda pendiente de pago o validacion administrativa.');
     }
 
-    private function ensurePlans()
+    private function limits(Subscription $subscription, array $usage): array
     {
-        return collect(config('trebbia.plans'))
-            ->map(function (array $plan): Plan {
-                return Plan::updateOrCreate(
-                    ['code' => $plan['code']],
-                    [
-                        'name' => $plan['name'],
-                        'monthly_price_cents' => $plan['monthly_price_cents'],
-                        'limits' => $plan['limits'],
-                        'features' => $plan['features'],
-                        'is_active' => true,
-                    ],
-                );
-            })
-            ->sortBy('monthly_price_cents')
-            ->values();
+        $limits = $this->entitlements->limits($subscription);
+        $capabilities = $this->entitlements->entitlements($subscription);
+
+        return $this->formatLimits($limits, $capabilities, $usage);
     }
 
-    private function ensureSubscription(?Plan $defaultPlan)
+    private function limitsForPlan(Plan $plan, array $usage): array
     {
-        return app('activeBusiness')->subscription()->firstOrCreate(
-            [],
-            [
-                'plan_id' => $defaultPlan?->id,
-                'status' => 'trialing',
-                'trial_ends_at' => now()->addDays(14),
-                'current_period_ends_at' => now()->addMonth(),
-            ],
-        )->load('plan');
+        return $this->formatLimits($plan->limits ?? [], $plan->entitlements ?? [], $usage);
     }
 
-    private function usage(): array
+    private function formatLimits(array $limits, array $capabilities, array $usage): array
     {
-        $business = app('activeBusiness');
-        $monthStart = now()->startOfMonth();
-        $monthEnd = now()->endOfMonth();
-
-        return [
-            'monthly_appointments' => $business->appointments()->whereBetween('starts_at', [$monthStart, $monthEnd])->count(),
-            'professionals' => $business->professionals()->where('is_active', true)->count(),
-            'services' => $business->services()->where('is_active', true)->count(),
-            'branches' => $business->branches()->where('is_active', true)->count(),
-            'users' => $business->businessUsers()->where('is_active', true)->count(),
-            'public_booking' => (bool) ($business->settings()->first()?->public_booking_settings['allow_public_booking'] ?? false),
-            'automations' => $business->appointmentReminders()->exists(),
-        ];
-    }
-
-    private function limits(?Plan $plan, array $usage): array
-    {
-        $limits = $plan?->limits ?? [];
         $labels = [
             'monthly_appointments' => 'Citas mensuales',
             'professionals' => 'Profesionales',
             'services' => 'Servicios',
             'branches' => 'Sedes',
             'users' => 'Usuarios',
-            'public_booking' => 'Reservas publicas',
-            'automations' => 'Automatizaciones',
+            'resources' => 'Recursos',
+            'public_booking.enabled' => 'Reservas publicas',
+            'whatsapp_link.enabled' => 'Enlace WhatsApp',
+            'whatsapp_auto.enabled' => 'WhatsApp automatico',
+            'automation.enabled' => 'Automatizaciones',
+            'reports.advanced' => 'Reportes avanzados',
         ];
 
         return collect($labels)
             ->map(fn (string $label, string $key): array => [
                 'key' => $key,
                 'label' => $label,
-                'used' => $usage[$key],
+                'used' => $usage[$key] ?? null,
                 'limit' => $limits[$key] ?? null,
-                'percent' => $this->percent($usage[$key], $limits[$key] ?? null),
-                'is_enabled' => is_bool($limits[$key] ?? null) ? (bool) $limits[$key] : true,
+                'percent' => $this->percent($usage[$key] ?? 0, $limits[$key] ?? null),
+                'is_enabled' => str_contains($key, '.') ? (bool) ($capabilities[$key] ?? false) : true,
             ])
             ->values()
             ->all();
@@ -139,10 +114,12 @@ class MembershipController extends Controller
     private function statusLabels(): array
     {
         return [
-            'trialing' => 'Prueba',
-            'active' => 'Activa',
-            'past_due' => 'Pago pendiente',
-            'cancelled' => 'Cancelada',
+            Subscription::STATUS_TRIALING => 'Prueba',
+            Subscription::STATUS_ACTIVE => 'Activa',
+            Subscription::STATUS_PAST_DUE => 'Pago pendiente',
+            Subscription::STATUS_EXPIRED => 'Expirada',
+            Subscription::STATUS_CANCELLED => 'Cancelada',
+            Subscription::STATUS_SUSPENDED => 'Suspendida',
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Services\ConversationManager;
+use App\Services\PlanEntitlements;
 use App\Services\WhatsAppBookingConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class WhatsAppSimulatorController extends Controller
     public function index(Request $request): View
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_link.enabled'), 403);
         $conversation = $this->selectedConversation($request);
         $settings = $business->settings()->firstOrCreate([]);
         $whatsappSettings = $this->whatsappSettings($business);
@@ -46,6 +48,8 @@ class WhatsAppSimulatorController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_link.enabled'), 403);
+
         $attributes = $request->validate([
             'phone' => ['required', 'string', 'max:60'],
             'name' => ['nullable', 'string', 'max:140'],
@@ -75,6 +79,7 @@ class WhatsAppSimulatorController extends Controller
 
     public function reset(Conversation $conversation): RedirectResponse
     {
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'whatsapp_link.enabled'), 403);
         abort_unless($conversation->business_id === app('activeBusiness')->id, 404);
 
         $conversation->state()->delete();

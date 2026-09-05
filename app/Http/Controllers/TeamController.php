@@ -6,6 +6,7 @@ use App\Models\BusinessInvitation;
 use App\Models\BusinessUser;
 use App\Models\Professional;
 use App\Models\User;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -103,13 +104,9 @@ class TeamController extends Controller
     private function hasAvailableUserSeat(): bool
     {
         $business = app('activeBusiness');
-        $limit = $business->subscription?->plan?->limits['users'] ?? null;
+        $entitlements = app(PlanEntitlements::class);
 
-        if (! $limit) {
-            return true;
-        }
-
-        return $business->businessUsers()->where('is_active', true)->count() < (int) $limit;
+        return $entitlements->can($business, 'team.manage') && $entitlements->hasCapacity($business, 'users');
     }
 
     private function syncProfessionalUser(?int $professionalId, int $userId): void

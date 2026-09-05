@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Service;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -29,8 +30,15 @@ class ServiceController extends Controller
 
     public function store(Request $request)
     {
+        $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'service.manage'), 403);
+
+        if (! app(PlanEntitlements::class)->hasCapacity($business, 'services')) {
+            return back()->withErrors(['name' => 'Alcanzaste el limite de servicios de tu membresia.'])->withInput();
+        }
+
         $attributes = $this->validated($request);
-        $service = app('activeBusiness')->services()->create($attributes['service']);
+        $service = $business->services()->create($attributes['service']);
         $this->syncProfessionals($service, $attributes['professional_ids']);
 
         return redirect()->route('servicios.index')->with('status', 'Servicio creado.');

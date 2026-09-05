@@ -45,9 +45,9 @@
         ];
 
         $plans = [
-            ['name' => 'Starter', 'copy' => 'Para negocios que quieren ordenar su agenda y empezar a recibir reservas con más claridad.'],
-            ['name' => 'Pro', 'copy' => 'Para equipos que necesitan automatizaciones, reportes y operación con varios profesionales.'],
-            ['name' => 'Business', 'copy' => 'Para operaciones con más capacidad, roles internos y control por negocio o sede.'],
+            ['name' => 'Esencial', 'copy' => 'Para negocios pequenos que quieren ordenar su agenda, clientes y reservas desde una base real de operacion.'],
+            ['name' => 'Profesional', 'copy' => 'Para equipos que necesitan mas capacidad, automatizaciones, WhatsApp asistido y reportes completos.'],
+            ['name' => 'Empresarial', 'copy' => 'Para operaciones con varias sedes, mas volumen, equipo completo y acompanamiento prioritario.'],
         ];
 
         $productCards = [

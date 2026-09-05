@@ -6,11 +6,28 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plan extends Model
 {
-    protected $fillable = ['name', 'code', 'monthly_price_cents', 'limits', 'features', 'is_active'];
+    protected $fillable = [
+        'name',
+        'code',
+        'description',
+        'currency',
+        'monthly_price_cents',
+        'annual_price_cents',
+        'limits',
+        'entitlements',
+        'features',
+        'sort_order',
+        'is_active',
+    ];
 
     protected function casts(): array
     {
-        return ['limits' => 'array', 'features' => 'array', 'is_active' => 'boolean'];
+        return [
+            'limits' => 'array',
+            'entitlements' => 'array',
+            'features' => 'array',
+            'is_active' => 'boolean',
+        ];
     }
 
     public function subscriptions()

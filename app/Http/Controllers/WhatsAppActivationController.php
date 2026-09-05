@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsAppActivationRequest;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,6 +14,7 @@ class WhatsAppActivationController extends Controller
     public function create(): View
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_auto.enabled'), 403);
 
         return view('whatsapp-activation.create', [
             'business' => $business,
@@ -25,6 +27,8 @@ class WhatsAppActivationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_auto.enabled'), 403);
+
         $attributes = $request->validate([
             'commercial_name' => ['required', 'string', 'max:160'],
             'legal_name' => ['nullable', 'string', 'max:180'],

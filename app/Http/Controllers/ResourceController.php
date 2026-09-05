@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Resource;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -31,7 +32,14 @@ class ResourceController extends Controller
 
     public function store(Request $request)
     {
-        app('activeBusiness')->resources()->create($this->validated($request));
+        $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'resource.manage'), 403);
+
+        if (! app(PlanEntitlements::class)->hasCapacity($business, 'resources')) {
+            return back()->withErrors(['name' => 'Alcanzaste el limite de recursos de tu membresia.'])->withInput();
+        }
+
+        $business->resources()->create($this->validated($request));
 
         return redirect()->route('recursos.index')->with('status', 'Recurso creado.');
     }
@@ -39,6 +47,8 @@ class ResourceController extends Controller
     public function storeSuggestions(Request $request)
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'resource.manage'), 403);
+
         $attributes = $request->validate([
             'resources' => ['required', 'array', 'min:1'],
             'resources.*.name' => ['required', 'string', 'max:140'],
@@ -53,6 +63,10 @@ class ResourceController extends Controller
 
         $created = 0;
         foreach ($attributes['resources'] as $resource) {
+            if (! app(PlanEntitlements::class)->hasCapacity($business, 'resources')) {
+                break;
+            }
+
             if (! (bool) ($resource['selected'] ?? false)) {
                 continue;
             }

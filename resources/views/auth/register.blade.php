@@ -10,7 +10,7 @@
             </a>
             <div class="trebbia-card mt-6 p-6">
                 <h1 class="text-2xl font-bold">Crear cuenta</h1>
-                <p class="mt-2 text-sm text-[#64716d]">Empieza con tu usuario y luego crearemos tu empresa.</p>
+                <p class="mt-2 text-sm text-[#64716d]">Empieza con tu usuario. Luego crearemos tu negocio y activaremos una prueba gratuita de 14 dias.</p>
                 <div class="mt-5">@include('partials.errors')</div>
                 <form method="POST" action="{{ route('register.store') }}" class="mt-5 space-y-4">
                     @csrf

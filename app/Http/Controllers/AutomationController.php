@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
 use App\Models\NotificationTemplate;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,7 @@ class AutomationController extends Controller
     public function index(): View
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'automation.enabled'), 403);
         $this->ensureDefaultTemplate();
 
         return view('automations.index', [
@@ -40,6 +42,7 @@ class AutomationController extends Controller
 
     public function storeTemplate(Request $request): RedirectResponse
     {
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'automation.enabled'), 403);
         app('activeBusiness')->notificationTemplates()->create($this->validatedTemplate($request));
 
         return redirect()->route('automations.index')->with('status', 'Plantilla creada.');
@@ -47,6 +50,7 @@ class AutomationController extends Controller
 
     public function updateTemplate(Request $request, NotificationTemplate $template): RedirectResponse
     {
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'automation.enabled'), 403);
         $this->authorizeTemplate($template);
         $template->update($this->validatedTemplate($request));
 
@@ -55,6 +59,7 @@ class AutomationController extends Controller
 
     public function scheduleReminder(Request $request, Appointment $appointment): RedirectResponse
     {
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'automation.enabled'), 403);
         $this->authorizeAppointment($appointment);
         $business = app('activeBusiness');
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\WhatsAppAccount;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class SettingsController extends Controller
             'invitations' => $business->invitations()->where('status', 'pending')->latest()->get(),
             'professionals' => $business->professionals()->orderBy('name')->get(),
             'roles' => config('trebbia.roles'),
-            'userLimit' => $business->subscription?->plan?->limits['users'] ?? null,
+            'userLimit' => app(PlanEntitlements::class)->limit($business, 'users'),
             'timezones' => $this->timezones(),
             'currencies' => $this->currencies(),
             'slotIntervals' => [10, 15, 20, 30, 45, 60],
@@ -56,6 +57,10 @@ class SettingsController extends Controller
             'timezone' => ['required', Rule::in(array_keys($this->timezones()))],
             'currency' => ['required', Rule::in(array_keys($this->currencies()))],
         ]);
+
+        if ($request->boolean('allow_public_booking')) {
+            abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'public_booking.enabled'), 403);
+        }
 
         app('activeBusiness')->update($attributes);
 
@@ -92,6 +97,10 @@ class SettingsController extends Controller
     public function updateWhatsapp(Request $request): RedirectResponse
     {
         $business = app('activeBusiness');
+        if ($request->boolean('enabled')) {
+            abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_link.enabled'), 403);
+        }
+
         $attributes = $request->validate([
             'enabled' => ['nullable', 'boolean'],
             'phone' => ['nullable', 'string', 'max:60'],
@@ -106,6 +115,10 @@ class SettingsController extends Controller
             'access_token' => ['nullable', 'string', 'max:4000'],
             'billing_owner_confirmed' => ['nullable', 'boolean'],
         ]);
+
+        if (filled($attributes['phone_number_id'] ?? null)) {
+            abort_unless(app(PlanEntitlements::class)->can($business, 'whatsapp_auto.enabled'), 403);
+        }
 
         abort_if(
             ($attributes['phone_number_id'] ?? null) && ! $request->boolean('billing_owner_confirmed'),
@@ -167,7 +180,14 @@ class SettingsController extends Controller
 
     public function storeBranch(Request $request): RedirectResponse
     {
-        $branch = app('activeBusiness')->branches()->create($this->validatedBranch($request));
+        $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'branch.manage'), 403);
+
+        if (! app(PlanEntitlements::class)->hasCapacity($business, 'branches')) {
+            return back()->withErrors(['name' => 'Alcanzaste el limite de sedes de tu membresia.'])->withInput();
+        }
+
+        $branch = $business->branches()->create($this->validatedBranch($request));
         $this->syncMainBranch($branch, $request->boolean('is_main'));
 
         return redirect()->route('settings.index')->with('status', 'Sede creada.');

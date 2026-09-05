@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -34,6 +35,12 @@ class ProfessionalController extends Controller
     public function store(Request $request)
     {
         $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'professional.manage'), 403);
+
+        if (! app(PlanEntitlements::class)->hasCapacity($business, 'professionals')) {
+            return back()->withErrors(['name' => 'Alcanzaste el limite de profesionales de tu membresia.'])->withInput();
+        }
+
         $attributes = $this->validated($request);
         $professional = $business->professionals()->create($attributes['professional']);
         $this->syncServices($professional, $attributes['service_ids']);
