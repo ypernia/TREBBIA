@@ -116,6 +116,55 @@ class TrebbiaFlowTest extends TestCase
             ->assertRedirect(route('business.create'));
     }
 
+    public function test_dashboard_shows_operational_ok_state_when_there_are_no_pending_actions(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Estado de hoy')
+            ->assertSee('Todo en orden')
+            ->assertSee('Agenda de hoy');
+    }
+
+    public function test_dashboard_and_agenda_surface_pending_booking_requests_as_attention(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update(['booking_notice_minutes' => 0]);
+        $service = $business->services()->create(['name' => 'Valoracion inicial', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Agenda', 'is_active' => true]);
+        $client = $business->clients()->create(['name' => 'Maria Pendiente', 'is_active' => true]);
+        $requestStart = now($business->timezone)->addDay()->setTime(10, 0);
+        $this->openWeekday($business, $requestStart->dayOfWeekIso);
+
+        app(BookingEngine::class)->createBookingRequest($business, [
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => $requestStart,
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+            'source_reference' => 'public:attention-test',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Requiere tu atencion')
+            ->assertSee('Maria Pendiente')
+            ->assertSee('Solicitudes pendientes');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.index'))
+            ->assertOk()
+            ->assertSee('Centro de atencion')
+            ->assertSee('Requiere atencion')
+            ->assertSee('Maria Pendiente');
+    }
+
     public function test_core_records_are_created_inside_the_active_business(): void
     {
         [$user, $business] = $this->tenantUser();

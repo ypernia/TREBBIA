@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\BookingRequest;
 use App\Models\Service;
 use App\Services\AppointmentAvailabilityService;
 use App\Services\BookingEngine;
@@ -41,6 +42,16 @@ class AppointmentController extends Controller
         $appointments = $view === 'week'
             ? (clone $appointmentsQuery)->whereBetween('starts_at', [$weekStart, $weekEnd])->orderBy('starts_at')->get()
             : (clone $appointmentsQuery)->whereDate('starts_at', $date)->orderBy('starts_at')->get();
+        $pendingBookingRequests = $business->bookingRequests()
+            ->with(['client', 'professional', 'service'])
+            ->where('status', BookingRequest::STATUS_PENDING)
+            ->where('starts_at', '>=', now())
+            ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
+            ->orderBy('starts_at')
+            ->take(8)
+            ->get();
+        $pendingAppointments = $appointments->where('status', Appointment::STATUS_SCHEDULED)->count();
+        $attentionCount = $pendingBookingRequests->count() + $pendingAppointments;
 
         return view('appointments.index', [
             'business' => $business,
@@ -51,14 +62,15 @@ class AppointmentController extends Controller
             'weekDays' => collect(range(0, 6))->map(fn (int $days) => $weekStart->addDays($days)),
             'appointments' => $appointments,
             'appointmentsByDay' => $appointments->groupBy(fn (Appointment $appointment) => $appointment->starts_at->toDateString()),
-            'pendingBookingRequests' => $business->bookingRequests()
-                ->with(['client', 'professional', 'service'])
-                ->where('status', 'pending')
-                ->where('starts_at', '>=', now())
-                ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
-                ->orderBy('starts_at')
-                ->take(8)
-                ->get(),
+            'pendingBookingRequests' => $pendingBookingRequests,
+            'agendaStatus' => [
+                'attention_count' => $attentionCount,
+                'pending_appointments' => $pendingAppointments,
+                'title' => $attentionCount > 0 ? 'Requiere atencion' : 'Todo en orden',
+                'message' => $attentionCount > 0
+                    ? 'Hay solicitudes o citas pendientes que conviene revisar antes de continuar.'
+                    : 'No hay pendientes visibles para esta vista.',
+            ],
             'upcoming' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->where('starts_at', '>=', now())

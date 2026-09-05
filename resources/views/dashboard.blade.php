@@ -5,14 +5,51 @@
 @section('page-title', 'Inicio')
 
 @section('content')
+    @php
+        $statusTone = $todayStatus['state'] === 'attention'
+            ? 'border-[#f4c7b8] bg-[#fff7ed] text-[#8a3027]'
+            : 'border-[#b9dfd5] bg-[#edf8f5] text-[#0f5f59]';
+        $statusIconTone = $todayStatus['state'] === 'attention'
+            ? 'bg-[#ffe4d6] text-[#8a3027]'
+            : 'bg-[#dff4ed] text-[#0f5f59]';
+    @endphp
+
+    <section class="trebbia-card mb-6 overflow-hidden border {{ $statusTone }}">
+        <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div class="flex items-start gap-4">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-md {{ $statusIconTone }}">
+                    <x-icon name="calendar" class="size-5" />
+                </span>
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-[0.16em] opacity-80">Estado de hoy</p>
+                    <h2 class="mt-1 text-2xl font-bold">{{ $todayStatus['title'] }}</h2>
+                    <p class="mt-1 text-sm leading-6 opacity-90">{{ $todayStatus['message'] }}</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-center sm:min-w-[24rem]">
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $metrics['todayAppointments'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Citas</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $metrics['pendingRequests'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Solicitudes</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $metrics['todayProfessionals'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Equipo</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ([
             ['label' => 'Citas de hoy', 'value' => $metrics['todayAppointments'], 'icon' => 'calendar'],
-            ['label' => 'Proximas citas', 'value' => $metrics['upcomingAppointments'], 'icon' => 'calendar'],
+            ['label' => 'Confirmadas hoy', 'value' => $metrics['todayConfirmedAppointments'], 'icon' => 'calendar'],
+            ['label' => 'Por confirmar hoy', 'value' => $metrics['todayPendingAppointments'], 'icon' => 'calendar'],
             ['label' => 'Solicitudes pendientes', 'value' => $metrics['pendingRequests'], 'icon' => 'calendar'],
-            ['label' => 'Clientes', 'value' => $metrics['clients'], 'icon' => 'users'],
             ['label' => 'Profesionales activos', 'value' => $metrics['professionals'], 'icon' => 'users'],
-            ['label' => 'Servicios activos', 'value' => $metrics['services'], 'icon' => 'briefcase'],
         ] as $metric)
             <div class="trebbia-card p-5">
                 <div class="flex items-center justify-between gap-3">
@@ -97,28 +134,33 @@
             <div class="trebbia-card p-5">
                 <div class="flex items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-bold">Proximas citas</h2>
-                        <p class="mt-1 text-sm text-[#64716d]">Aqui aparece la agenda operativa de reservas confirmadas o pendientes.</p>
+                        <h2 class="text-lg font-bold">Agenda de hoy</h2>
+                        <p class="mt-1 text-sm text-[#64716d]">Lo que el equipo debe atender durante el dia.</p>
                     </div>
                     <a href="{{ route('agenda.index') }}" class="trebbia-button trebbia-button-secondary">Ver agenda</a>
                 </div>
 
-                @if ($upcomingAppointments->isEmpty())
+                @if ($todayAppointments->isEmpty())
                     <x-empty-state
                         class="mt-6 rounded-md border border-dashed border-[#cfd8d2] bg-[#f8faf8]"
                         icon="calendar"
-                        title="Aun no hay citas programadas"
+                        title="Hoy no hay citas programadas"
                         body="Comparte tu pagina de reservas o crea una cita manual para empezar."
                         :action="route('agenda.create')"
                         action-label="Crear cita"
                     />
                 @else
                     <div class="mt-5 space-y-3">
-                        @foreach ($upcomingAppointments as $appointment)
-                            <div class="rounded-md border border-[#e1e6e0] p-4">
-                                <p class="font-bold">{{ $appointment->starts_at->format('d/m/Y H:i') }}</p>
-                                <p class="text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} / {{ ucfirst($appointment->status) }}</p>
-                            </div>
+                        @foreach ($todayAppointments as $appointment)
+                            <a href="{{ route('agenda.edit', $appointment) }}" class="block rounded-md border border-[#e1e6e0] p-4 hover:border-[#b9d8cd]">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p class="font-bold">{{ $appointment->starts_at->format('H:i') }} - {{ $appointment->service?->name }}</p>
+                                        <p class="text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} / {{ $appointment->professional?->name ?: 'Profesional sin asignar' }}</p>
+                                    </div>
+                                    <span class="w-fit rounded-md bg-[#edf7f4] px-2 py-1 text-xs font-bold text-[#245f57]">{{ ucfirst($appointment->status) }}</span>
+                                </div>
+                            </a>
                         @endforeach
                     </div>
                 @endif

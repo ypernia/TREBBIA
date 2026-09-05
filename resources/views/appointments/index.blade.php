@@ -19,6 +19,30 @@
         ];
     @endphp
 
+    <section class="trebbia-card mb-5 overflow-hidden border {{ $agendaStatus['attention_count'] > 0 ? 'border-[#f4c7b8] bg-[#fff7ed]' : 'border-[#b9dfd5] bg-[#edf8f5]' }}">
+        <div class="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Centro de atencion</p>
+                <h2 class="mt-1 text-2xl font-bold">{{ $agendaStatus['title'] }}</h2>
+                <p class="mt-1 text-sm leading-6 text-[#64716d]">{{ $agendaStatus['message'] }}</p>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-center sm:min-w-[24rem]">
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $appointments->count() }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Citas</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $pendingBookingRequests->count() }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Solicitudes</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $agendaStatus['pending_appointments'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Pendientes</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <form method="GET" action="{{ route('agenda.index') }}" class="trebbia-card grid gap-3 p-4 md:grid-cols-[9rem_10rem_1fr_1fr_10rem_auto] md:items-end">
             <div>
@@ -191,19 +215,19 @@
             </section>
 
             <section class="trebbia-card p-5">
-            <h2 class="text-lg font-bold">Proximas citas</h2>
-            <div class="mt-4 space-y-3">
-                @forelse ($upcoming as $appointment)
-                    <a href="{{ route('agenda.edit', $appointment) }}" class="block rounded-md border border-[#e1e6e0] p-4 hover:border-[#b9d8cd]">
-                        <p class="font-bold">{{ $appointment->starts_at->format('d/m H:i') }}</p>
-                        <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
-                        <p class="text-sm text-[#64716d]">{{ $appointment->service?->name }}</p>
-                        <span class="mt-3 inline-flex rounded-md px-2 py-1 text-xs font-bold {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
-                    </a>
-                @empty
-                    <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin proximas citas.</p>
-                @endforelse
-            </div>
+                <h2 class="text-lg font-bold">Proximas citas</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($upcoming as $appointment)
+                        <a href="{{ route('agenda.edit', $appointment) }}" class="block rounded-md border border-[#e1e6e0] p-4 hover:border-[#b9d8cd]">
+                            <p class="font-bold">{{ $appointment->starts_at->format('d/m H:i') }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
+                            <p class="text-sm text-[#64716d]">{{ $appointment->service?->name }}</p>
+                            <span class="mt-3 inline-flex rounded-md px-2 py-1 text-xs font-bold {{ $sourceStyles[$appointment->source_channel] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $appointment->sourceLabel() }}</span>
+                        </a>
+                    @empty
+                        <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin proximas citas.</p>
+                    @endforelse
+                </div>
             </section>
         </aside>
     </div>
