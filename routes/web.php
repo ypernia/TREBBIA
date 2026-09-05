@@ -1,6 +1,13 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\Admin\AdminAuditController;
+use App\Http\Controllers\Admin\AdminBusinessController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminPlanController;
+use App\Http\Controllers\Admin\AdminSubscriptionController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminWhatsAppController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BusinessSetupController;
@@ -27,7 +34,13 @@ use App\Http\Controllers\WhatsAppActivationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : view('welcome');
+    if (! auth()->check()) {
+        return view('welcome');
+    }
+
+    return auth()->user()->isPlatformAdmin()
+        ? redirect()->route('admin.dashboard')
+        : redirect()->route('dashboard');
 })->name('home');
 
 Route::get('/reservar/{business:slug}', [PublicBookingController::class, 'show'])->name('public-booking.show');
@@ -50,6 +63,20 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::prefix('admin')
+        ->name('admin.')
+        ->middleware('platform.admin')
+        ->group(function (): void {
+            Route::get('/', AdminDashboardController::class)->name('dashboard');
+            Route::get('/businesses', [AdminBusinessController::class, 'index'])->name('businesses.index');
+            Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
+            Route::patch('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update'])->name('subscriptions.update');
+            Route::get('/plans', [AdminPlanController::class, 'index'])->name('plans.index');
+            Route::get('/whatsapp', AdminWhatsAppController::class)->name('whatsapp.index');
+            Route::get('/audit', AdminAuditController::class)->name('audit.index');
+        });
+
     Route::get('/empresa/nueva', [BusinessSetupController::class, 'create'])->name('business.create');
     Route::post('/empresa/nueva', [BusinessSetupController::class, 'store'])->name('business.store');
 

@@ -16,6 +16,7 @@ use App\Models\Professional;
 use App\Models\ProfessionalSchedule;
 use App\Models\Resource;
 use App\Models\Service;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WhatsAppAccount;
 use App\Models\WhatsAppActivationRequest;
@@ -1139,6 +1140,66 @@ class TrebbiaFlowTest extends TestCase
             'business_id' => $business->id,
             'to_plan_id' => $plan->id,
             'reason' => 'plan_requested',
+        ]);
+    }
+
+    public function test_superadmin_can_access_platform_admin_without_business(): void
+    {
+        $superadmin = User::factory()->create([
+            'email' => 'admin@trebbia.app',
+            'platform_role' => 'superadmin',
+            'platform_permissions' => ['*'],
+            'platform_access_enabled_at' => now(),
+        ]);
+
+        $this->actingAs($superadmin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Panel de plataforma');
+    }
+
+    public function test_business_user_cannot_access_platform_admin(): void
+    {
+        [$user] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->get(route('admin.dashboard'))
+            ->assertForbidden();
+    }
+
+    public function test_superadmin_can_update_subscription_and_audit_is_recorded(): void
+    {
+        [, $business] = $this->tenantUser();
+        $superadmin = User::factory()->create([
+            'email' => 'admin@trebbia.app',
+            'platform_role' => 'superadmin',
+            'platform_permissions' => ['*'],
+            'platform_access_enabled_at' => now(),
+        ]);
+
+        $this->actingAs($superadmin)->get(route('admin.subscriptions.index'))->assertOk();
+
+        $plan = Plan::where('code', 'professional')->firstOrFail();
+        $subscription = $business->subscription()->firstOrFail();
+
+        $this->actingAs($superadmin)
+            ->patch(route('admin.subscriptions.update', $subscription), [
+                'status' => Subscription::STATUS_ACTIVE,
+                'plan_id' => $plan->id,
+                'reason' => 'Pago confirmado manualmente',
+            ])
+            ->assertRedirect(route('admin.subscriptions.index'));
+
+        $this->assertDatabaseHas('subscriptions', [
+            'business_id' => $business->id,
+            'plan_id' => $plan->id,
+            'status' => Subscription::STATUS_ACTIVE,
+        ]);
+        $this->assertDatabaseHas('platform_audit_logs', [
+            'user_id' => $superadmin->id,
+            'business_id' => $business->id,
+            'action' => 'subscription.updated',
+            'reason' => 'Pago confirmado manualmente',
         ]);
     }
 

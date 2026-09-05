@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureBusinessSelected;
+use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureSubscriptionAccess;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'business' => EnsureBusinessSelected::class,
+            'platform.admin' => EnsurePlatformAdmin::class,
             'subscription' => EnsureSubscriptionAccess::class,
         ]);
         $middleware->validateCsrfTokens(except: [

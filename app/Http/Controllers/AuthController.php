@@ -46,6 +46,11 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+
+        if ($request->user()->isPlatformAdmin()) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
         $business = $request->user()->businesses()->wherePivot('is_active', true)->first();
 
         if (! $business) {

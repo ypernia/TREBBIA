@@ -22,6 +22,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'platform_role',
+        'platform_permissions',
+        'platform_access_enabled_at',
     ];
 
     /**
@@ -44,6 +47,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'platform_permissions' => 'array',
+            'platform_access_enabled_at' => 'datetime',
         ];
     }
 
@@ -76,5 +81,10 @@ class User extends Authenticatable
             ->where('businesses.id', $businessId)
             ->wherePivot('is_active', true)
             ->first();
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return $this->platform_role === 'superadmin' && $this->platform_access_enabled_at !== null;
     }
 }
