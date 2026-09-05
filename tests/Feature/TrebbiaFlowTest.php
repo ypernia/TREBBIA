@@ -946,6 +946,70 @@ class TrebbiaFlowTest extends TestCase
         $this->assertFalse($appointment->source_metadata['reschedule_contact_pending']);
     }
 
+    public function test_whatsapp_contact_center_groups_manual_follow_up_work(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $settings = $business->settings()->firstOrCreate([]);
+        $settings->update([
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573113302090',
+                'entry_message' => 'Hola, quiero agendar una cita',
+            ],
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+            ],
+        ]);
+        $client = $business->clients()->create(['name' => 'Cliente WhatsApp', 'phone' => '573001112233']);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Contacto', 'is_active' => true]);
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => now($business->timezone)->addDay()->setTime(9, 0),
+            'ends_at' => now($business->timezone)->addDay()->setTime(10, 0),
+            'status' => Appointment::STATUS_CONFIRMED,
+            'source_metadata' => [
+                'reschedule_contact_pending' => true,
+                'reschedule_contact_status' => Appointment::CONTACT_CALL_REQUIRED,
+            ],
+        ]);
+        $business->bookingRequests()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => now($business->timezone)->addDays(2)->setTime(11, 0),
+            'ends_at' => now($business->timezone)->addDays(2)->setTime(12, 0),
+            'status' => BookingRequest::STATUS_PENDING,
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+            'requested_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('whatsapp-contact.index'))
+            ->assertOk()
+            ->assertSee('Contacto WhatsApp')
+            ->assertSee('Todo lo que debes gestionar por WhatsApp')
+            ->assertSee('Cliente WhatsApp')
+            ->assertSee('Requiere llamada')
+            ->assertSee('Solicitudes pendientes')
+            ->assertSee('Abrir WhatsApp');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('agenda.contact-status', $appointment), [
+                'contact_status' => Appointment::CONTACT_CONFIRMED,
+                'return_to' => route('whatsapp-contact.index'),
+            ])
+            ->assertRedirect(route('whatsapp-contact.index'));
+
+        $appointment->refresh();
+
+        $this->assertFalse($appointment->source_metadata['reschedule_contact_pending']);
+    }
+
     public function test_blocked_time_rejects_professional_from_another_business(): void
     {
         [$user, $business] = $this->tenantUser();
