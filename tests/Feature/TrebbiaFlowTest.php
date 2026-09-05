@@ -1257,6 +1257,84 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_superadmin_can_view_business_admin_ficha_without_sensitive_records(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update([
+            'industry' => 'Fisioterapia',
+            'email' => 'agenda@clinica.test',
+            'phone' => '3113302090',
+        ]);
+        $client = $business->clients()->create([
+            'name' => 'Paciente Reservado',
+            'email' => 'paciente@example.com',
+            'phone' => '3001112233',
+            'notes' => 'Nota privada del paciente',
+            'is_active' => true,
+        ]);
+        $client->clinicalRecords()->create([
+            'business_id' => $business->id,
+            'record_date' => now()->toDateString(),
+            'reason_for_visit' => 'Dolor reservado',
+            'diagnosis' => 'Diagnostico sensible interno',
+            'status' => ClinicalRecord::STATUS_DRAFT,
+        ]);
+        $plan = Plan::where('code', 'professional')->firstOrFail();
+        $subscription = $business->subscription()->firstOrFail();
+        $business->manualPayments()->create([
+            'subscription_id' => $subscription->id,
+            'plan_id' => $plan->id,
+            'recorded_by' => $business->owner_id,
+            'status' => ManualPayment::STATUS_CONFIRMED,
+            'currency' => 'COP',
+            'amount_cents' => 9900000,
+            'period_months' => 1,
+            'payment_method' => 'bank_transfer',
+            'paid_at' => now(),
+        ]);
+
+        $superadmin = User::factory()->create([
+            'email' => 'admin@trebbia.app',
+            'platform_role' => 'superadmin',
+            'platform_permissions' => ['*'],
+            'platform_access_enabled_at' => now(),
+        ]);
+
+        $this->actingAs($superadmin)
+            ->get(route('admin.businesses.show', $business))
+            ->assertOk()
+            ->assertSee('Ficha del business')
+            ->assertSee('Clinica Demo')
+            ->assertSee('agenda@clinica.test')
+            ->assertSee('Pagos recientes')
+            ->assertSee('Politica de soporte sensible')
+            ->assertDontSee('Diagnostico sensible interno')
+            ->assertDontSee('Nota privada del paciente');
+    }
+
+    public function test_superadmin_subscription_quick_action_returns_to_business_ficha(): void
+    {
+        [, $business] = $this->tenantUser();
+        $superadmin = User::factory()->create([
+            'email' => 'admin-return@trebbia.app',
+            'platform_role' => 'superadmin',
+            'platform_permissions' => ['*'],
+            'platform_access_enabled_at' => now(),
+        ]);
+        $plan = Plan::where('code', 'professional')->firstOrFail();
+        $subscription = $business->subscription()->firstOrFail();
+        $returnUrl = route('admin.businesses.show', $business);
+
+        $this->actingAs($superadmin)
+            ->patch(route('admin.subscriptions.update', $subscription), [
+                'status' => Subscription::STATUS_ACTIVE,
+                'plan_id' => $plan->id,
+                'reason' => 'Activacion desde ficha',
+                'redirect_to' => $returnUrl,
+            ])
+            ->assertRedirect($returnUrl);
+    }
+
     public function test_public_booking_page_requires_enabled_public_booking(): void
     {
         [, $business] = $this->tenantUser();

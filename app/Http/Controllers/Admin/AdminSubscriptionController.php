@@ -32,6 +32,7 @@ class AdminSubscriptionController extends Controller
             'status' => ['required', Rule::in(array_keys($this->statusLabels()))],
             'plan_id' => ['nullable', Rule::exists('plans', 'id')->where('is_active', true)],
             'reason' => ['required', 'string', 'max:180'],
+            'redirect_to' => ['nullable', 'url'],
         ]);
 
         $plan = ($attributes['plan_id'] ?? null)
@@ -56,6 +57,10 @@ class AdminSubscriptionController extends Controller
             $subscription->business_id,
             $attributes['reason'],
         );
+
+        if (! empty($attributes['redirect_to']) && str_starts_with($attributes['redirect_to'], url('/admin'))) {
+            return redirect()->to($attributes['redirect_to'])->with('status', 'Suscripcion actualizada.');
+        }
 
         return redirect()->route('admin.subscriptions.index')->with('status', 'Suscripcion actualizada.');
     }

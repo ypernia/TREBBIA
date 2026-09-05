@@ -29,7 +29,7 @@
             <div class="divide-y divide-[#e7ebe7]">
                 @forelse ($recentBusinesses as $business)
                     <div class="p-5">
-                        <p class="font-bold">{{ $business->name }}</p>
+                        <a href="{{ route('admin.businesses.show', $business) }}" class="font-bold text-[#0f5f59]">{{ $business->name }}</a>
                         <p class="mt-1 text-sm text-[#64748b]">{{ $business->owner?->email }} - {{ $business->subscription?->status ?? 'sin suscripcion' }}</p>
                     </div>
                 @empty
@@ -45,7 +45,11 @@
             <div class="divide-y divide-[#e7ebe7]">
                 @forelse ($recentSubscriptions as $subscription)
                     <div class="p-5">
-                        <p class="font-bold">{{ $subscription->business?->name }}</p>
+                        @if ($subscription->business)
+                            <a href="{{ route('admin.businesses.show', $subscription->business) }}" class="font-bold text-[#0f5f59]">{{ $subscription->business->name }}</a>
+                        @else
+                            <p class="font-bold">Sin business</p>
+                        @endif
                         <p class="mt-1 text-sm text-[#64748b]">{{ $subscription->status }} - {{ $subscription->plan?->name ?? 'Trial sin plan' }}</p>
                     </div>
                 @empty
@@ -63,7 +67,11 @@
             @forelse ($recentPayments as $payment)
                 <div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <p class="font-bold">{{ $payment->business?->name }}</p>
+                        @if ($payment->business)
+                            <a href="{{ route('admin.businesses.show', $payment->business) }}" class="font-bold text-[#0f5f59]">{{ $payment->business->name }}</a>
+                        @else
+                            <p class="font-bold">Sin business</p>
+                        @endif
                         <p class="text-sm text-[#64748b]">{{ $payment->plan?->name }} - {{ $payment->payment_method }}</p>
                     </div>
                     <p class="font-bold">${{ number_format($payment->amount_cents / 100, 0, ',', '.') }} {{ $payment->currency }}</p>

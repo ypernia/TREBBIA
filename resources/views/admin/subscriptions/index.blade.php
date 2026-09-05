@@ -20,7 +20,11 @@
                     @foreach ($subscriptions as $subscription)
                         <tr class="align-top">
                             <td class="px-5 py-4">
-                                <p class="font-bold">{{ $subscription->business?->name }}</p>
+                                @if ($subscription->business)
+                                    <a href="{{ route('admin.businesses.show', $subscription->business) }}" class="font-bold text-[#0f5f59]">{{ $subscription->business->name }}</a>
+                                @else
+                                    <p class="font-bold">Sin business</p>
+                                @endif
                                 <p class="text-[#64748b]">{{ $subscription->business?->owner?->email }}</p>
                             </td>
                             <td class="px-5 py-4">

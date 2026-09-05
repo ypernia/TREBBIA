@@ -31,4 +31,14 @@ class SubscriptionEvent extends Model
     {
         return $this->belongsTo(Subscription::class);
     }
+
+    public function fromPlan()
+    {
+        return $this->belongsTo(Plan::class, 'from_plan_id');
+    }
+
+    public function toPlan()
+    {
+        return $this->belongsTo(Plan::class, 'to_plan_id');
+    }
 }

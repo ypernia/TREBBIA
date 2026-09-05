@@ -25,7 +25,7 @@
                     @forelse ($businesses as $business)
                         <tr>
                             <td class="px-5 py-4">
-                                <p class="font-bold">{{ $business->name }}</p>
+                                <a href="{{ route('admin.businesses.show', $business) }}" class="font-bold text-[#0f5f59]">{{ $business->name }}</a>
                                 <p class="text-[#64748b]">{{ $business->slug }}</p>
                             </td>
                             <td class="px-5 py-4">{{ $business->owner?->email }}</td>

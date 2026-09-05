@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
         ->group(function (): void {
             Route::get('/', AdminDashboardController::class)->name('dashboard');
             Route::get('/businesses', [AdminBusinessController::class, 'index'])->name('businesses.index');
+            Route::get('/businesses/{business}', [AdminBusinessController::class, 'show'])->name('businesses.show');
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
             Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
             Route::patch('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update'])->name('subscriptions.update');
