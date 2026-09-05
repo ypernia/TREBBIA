@@ -821,7 +821,7 @@ class TrebbiaFlowTest extends TestCase
                 'reason' => 'Incapacidad',
                 'confirm_impact' => 1,
             ])
-            ->assertRedirect(route('agenda.index', ['date' => now($business->timezone)->addDay()->toDateString()]));
+            ->assertRedirect(route('blocked-times.show', BlockedTime::first()));
 
         $this->assertDatabaseHas('blocked_times', [
             'business_id' => $business->id,
@@ -835,6 +835,55 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Bloqueos proximos')
             ->assertSee('Incapacidad');
+    }
+
+    public function test_blocked_time_resolution_suggests_and_reschedules_affected_appointment(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update(['slot_interval_minutes' => 30, 'booking_notice_minutes' => 0]);
+        $client = $business->clients()->create(['name' => 'Ana Reprogramar', 'phone' => '573001112233']);
+        $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => Appointment::STATUS_CONFIRMED,
+        ]);
+
+        $blockedTime = $business->blockedTimes()->create([
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 08:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'reason' => 'Emergencia',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('blocked-times.show', $blockedTime))
+            ->assertOk()
+            ->assertSee('Reprogramacion asistida')
+            ->assertSee('Ana Reprogramar')
+            ->assertSee('10:00')
+            ->assertSee('Mensaje sugerido');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('agenda.reschedule', $appointment), [
+                'date' => '2026-09-07',
+                'starts_at' => '10:00',
+                'return_to' => route('blocked-times.show', $blockedTime),
+            ])
+            ->assertRedirect(route('blocked-times.show', $blockedTime));
+
+        $appointment->refresh();
+
+        $this->assertSame('2026-09-07 10:00:00', $appointment->starts_at->format('Y-m-d H:i:s'));
+        $this->assertTrue($appointment->source_metadata['reschedule_contact_pending']);
     }
 
     public function test_blocked_time_rejects_professional_from_another_business(): void

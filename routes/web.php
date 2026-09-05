@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AppointmentRescheduleController;
 use App\Http\Controllers\Admin\AdminAuditController;
 use App\Http\Controllers\Admin\AdminBusinessController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -93,6 +94,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/agenda/bloqueos/nuevo', [BlockedTimeController::class, 'create'])->name('blocked-times.create');
         Route::post('/agenda/bloqueos', [BlockedTimeController::class, 'store'])->name('blocked-times.store');
+        Route::get('/agenda/bloqueos/{blockedTime}', [BlockedTimeController::class, 'show'])->name('blocked-times.show');
+        Route::patch('/agenda/{appointment}/reprogramar', [AppointmentRescheduleController::class, 'update'])->name('agenda.reschedule');
+        Route::patch('/agenda/{appointment}/pendiente-contacto', [AppointmentRescheduleController::class, 'markContactPending'])->name('agenda.contact-pending');
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::patch('/solicitudes-reserva/{bookingRequest}/aceptar', [BookingRequestController::class, 'accept'])->name('booking-requests.accept');
         Route::patch('/solicitudes-reserva/{bookingRequest}/rechazar', [BookingRequestController::class, 'reject'])->name('booking-requests.reject');

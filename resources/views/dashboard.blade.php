@@ -190,6 +190,7 @@
                                         Agenda general
                                     @endif
                                 </p>
+                                <a class="mt-3 inline-flex text-sm font-bold text-[#245f57] hover:underline" href="{{ route('blocked-times.show', $blockedTime) }}">Resolver citas</a>
                             </div>
                         @endforeach
                     </div>

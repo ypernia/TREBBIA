@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\BlockedTime;
+use App\Services\BookingEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +53,7 @@ class BlockedTimeController extends Controller
         $startsAt = $this->startsAt($attributes);
         $endsAt = $this->endsAt($attributes);
 
-        app('activeBusiness')->blockedTimes()->create([
+        $blockedTime = app('activeBusiness')->blockedTimes()->create([
             'professional_id' => $attributes['scope'] === 'professional' ? $attributes['professional_id'] : null,
             'resource_id' => $attributes['scope'] === 'resource' ? $attributes['resource_id'] : null,
             'starts_at' => $startsAt,
@@ -62,8 +64,34 @@ class BlockedTimeController extends Controller
         $message = 'Bloqueo guardado. TREBBIA recalculara disponibilidad para nuevas reservas.';
 
         return redirect()
-            ->route('agenda.index', ['date' => $startsAt->toDateString()])
+            ->route('blocked-times.show', $blockedTime)
             ->with('status', $message);
+    }
+
+    public function show(BlockedTime $blockedTime, BookingEngine $booking): View
+    {
+        $this->authorizeTenant($blockedTime);
+
+        $impact = $this->impact([
+            'scope' => $blockedTime->professional_id ? 'professional' : ($blockedTime->resource_id ? 'resource' : 'business'),
+            'professional_id' => $blockedTime->professional_id,
+            'resource_id' => $blockedTime->resource_id,
+            'date' => $blockedTime->starts_at->toDateString(),
+            'starts_at' => $blockedTime->starts_at->format('H:i'),
+            'ends_at' => $blockedTime->ends_at->format('H:i'),
+            'reason' => $blockedTime->reason ?: 'Otro',
+        ]);
+
+        $suggestions = $impact->mapWithKeys(function (Appointment $appointment) use ($booking): array {
+            return [$appointment->id => $this->suggestionsFor($appointment, $booking)->all()];
+        });
+
+        return view('blocked-times.show', [
+            'business' => app('activeBusiness'),
+            'blockedTime' => $blockedTime,
+            'impact' => $impact,
+            'suggestions' => $suggestions,
+        ]);
     }
 
     private function validated(Request $request): array
@@ -139,5 +167,32 @@ class BlockedTimeController extends Controller
             'Mantenimiento',
             'Otro',
         ];
+    }
+
+    private function suggestionsFor(Appointment $appointment, BookingEngine $booking)
+    {
+        if (! $appointment->service || ! $appointment->professional_id) {
+            return collect();
+        }
+
+        $business = app('activeBusiness');
+        $baseDate = CarbonImmutable::parse($appointment->starts_at, $business->timezone);
+
+        return collect(range(0, 6))
+            ->flatMap(fn (int $days) => $booking->availableSlots(
+                $business,
+                $appointment->service,
+                $appointment->professional_id,
+                $baseDate->addDays($days),
+                $appointment->resource_id,
+            ))
+            ->reject(fn (CarbonImmutable $slot): bool => $slot->equalTo(CarbonImmutable::parse($appointment->starts_at, $business->timezone)))
+            ->take(3)
+            ->values();
+    }
+
+    private function authorizeTenant(BlockedTime $blockedTime): void
+    {
+        abort_unless($blockedTime->business_id === app('activeBusiness')->id, 404);
     }
 }
