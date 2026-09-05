@@ -16,8 +16,20 @@ class DashboardController extends Controller
         $pendingRequestsQuery = $business->bookingRequests()->where('status', BookingRequest::STATUS_PENDING);
         $todayAppointmentsQuery = $business->appointments()->whereDate('starts_at', $today);
         $todayBlockedTimesQuery = $business->blockedTimes()->whereDate('starts_at', $today);
+        $contactFollowUpQuery = $business->appointments()
+            ->where('starts_at', '>=', now($business->timezone)->subDay())
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('source_metadata->reschedule_contact_pending', true)
+                    ->orWhereIn('source_metadata->reschedule_contact_status', [
+                        Appointment::CONTACT_PENDING,
+                        Appointment::CONTACT_SENT,
+                        Appointment::CONTACT_NO_RESPONSE,
+                        Appointment::CONTACT_CALL_REQUIRED,
+                    ]);
+            });
         $todayPendingAppointments = (clone $todayAppointmentsQuery)->where('status', Appointment::STATUS_SCHEDULED)->count();
-        $attentionCount = (clone $pendingRequestsQuery)->count() + $todayPendingAppointments;
+        $attentionCount = (clone $pendingRequestsQuery)->count() + $todayPendingAppointments + (clone $contactFollowUpQuery)->count();
 
         return view('dashboard', [
             'business' => $business,
@@ -35,6 +47,7 @@ class DashboardController extends Controller
                 'todayPendingAppointments' => $todayPendingAppointments,
                 'upcomingAppointments' => $business->appointments()->where('starts_at', '>=', now())->count(),
                 'pendingRequests' => (clone $pendingRequestsQuery)->count(),
+                'contactFollowUps' => (clone $contactFollowUpQuery)->count(),
                 'todayBlockedTimes' => (clone $todayBlockedTimesQuery)->count(),
                 'todayProfessionals' => $business->appointments()
                     ->whereDate('starts_at', $today)
@@ -69,6 +82,11 @@ class DashboardController extends Controller
                 ->with(['client', 'professional', 'service'])
                 ->where('status', BookingRequest::STATUS_PENDING)
                 ->when(request('attention') === 'today', fn (Builder $query): Builder => $query->whereDate('starts_at', $today))
+                ->orderBy('starts_at')
+                ->take(5)
+                ->get(),
+            'contactFollowUpAppointments' => (clone $contactFollowUpQuery)
+                ->with(['client', 'professional', 'service'])
                 ->orderBy('starts_at')
                 ->take(5)
                 ->get(),

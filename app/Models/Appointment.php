@@ -23,6 +23,16 @@ class Appointment extends Model
 
     public const STATUS_COMPLETED = 'completed';
 
+    public const CONTACT_PENDING = 'pending';
+
+    public const CONTACT_SENT = 'sent';
+
+    public const CONTACT_CONFIRMED = 'confirmed';
+
+    public const CONTACT_NO_RESPONSE = 'no_response';
+
+    public const CONTACT_CALL_REQUIRED = 'call_required';
+
     protected $fillable = [
         'business_id',
         'branch_id',
@@ -61,6 +71,40 @@ class Appointment extends Model
     public function sourceLabel(): string
     {
         return self::sourceLabels()[$this->source_channel] ?? ucfirst((string) $this->source_channel);
+    }
+
+    public static function contactStatusLabels(): array
+    {
+        return [
+            self::CONTACT_PENDING => 'Pendiente por contactar',
+            self::CONTACT_SENT => 'Mensaje enviado',
+            self::CONTACT_CONFIRMED => 'Cliente confirmo',
+            self::CONTACT_NO_RESPONSE => 'Cliente no respondio',
+            self::CONTACT_CALL_REQUIRED => 'Requiere llamada',
+        ];
+    }
+
+    public function contactStatus(): ?string
+    {
+        return $this->source_metadata['reschedule_contact_status']
+            ?? ($this->source_metadata['reschedule_contact_pending'] ?? false ? self::CONTACT_PENDING : null);
+    }
+
+    public function contactStatusLabel(): ?string
+    {
+        $status = $this->contactStatus();
+
+        return $status ? self::contactStatusLabels()[$status] ?? ucfirst($status) : null;
+    }
+
+    public function needsContactFollowUp(): bool
+    {
+        return in_array($this->contactStatus(), [
+            self::CONTACT_PENDING,
+            self::CONTACT_SENT,
+            self::CONTACT_NO_RESPONSE,
+            self::CONTACT_CALL_REQUIRED,
+        ], true);
     }
 
     public function business()

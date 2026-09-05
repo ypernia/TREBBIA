@@ -50,6 +50,9 @@
                         $message = $suggestionText
                             ? "Hola {$clientName}, necesitamos reprogramar tu cita del {$oldSlot}. Tenemos estas opciones disponibles: {$suggestionText}. Cual te funciona mejor?"
                             : "Hola {$clientName}, necesitamos reprogramar tu cita del {$oldSlot}. Te escribimos para revisar una nueva disponibilidad.";
+                        $whatsappUrl = $appointment->client?->phone
+                            ? 'https://wa.me/'.preg_replace('/\D+/', '', $appointment->client->phone).'?text='.rawurlencode($message)
+                            : null;
                     @endphp
 
                     <article class="p-5">
@@ -57,6 +60,9 @@
                             <div>
                                 <p class="font-bold">{{ $appointment->starts_at->format('d/m/Y H:i') }} - {{ $appointment->service?->name ?: 'Servicio' }}</p>
                                 <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} / {{ $appointment->professional?->name ?: 'Profesional sin asignar' }}</p>
+                                @if ($appointment->contactStatusLabel())
+                                    <span class="mt-2 inline-flex w-fit rounded-md bg-[#fff7ed] px-2 py-1 text-xs font-bold text-[#8a3027]">{{ $appointment->contactStatusLabel() }}</span>
+                                @endif
                                 @if ($appointment->resource)
                                     <p class="text-sm text-[#64716d]">Recurso: {{ $appointment->resource->name }}</p>
                                 @endif
@@ -87,13 +93,35 @@
 
                             <div class="rounded-md border border-[#e1e6e0] bg-[#fbfcfb] p-4">
                                 <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-[#64716d]">Mensaje sugerido</h3>
-                                <p class="mt-3 text-sm leading-6 text-[#53615d]">{{ $message }}</p>
+                                <p id="message-{{ $appointment->id }}" class="mt-3 text-sm leading-6 text-[#53615d]">{{ $message }}</p>
+                                <div class="mt-4 grid gap-2">
+                                    <button class="trebbia-button trebbia-button-secondary w-full" type="button" data-copy-target="message-{{ $appointment->id }}">Copiar mensaje</button>
+                                    @if ($whatsappUrl)
+                                        <a class="trebbia-button w-full text-center" href="{{ $whatsappUrl }}" target="_blank" rel="noopener">Abrir WhatsApp</a>
+                                    @endif
+                                </div>
                                 <form method="POST" action="{{ route('agenda.contact-pending', $appointment) }}" class="mt-4">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="return_to" value="{{ url()->current() }}">
                                     <button class="trebbia-button trebbia-button-secondary w-full">Marcar por contactar</button>
                                 </form>
+                                <div class="mt-3 grid gap-2">
+                                    @foreach ([
+                                        \App\Models\Appointment::CONTACT_SENT => 'Mensaje enviado',
+                                        \App\Models\Appointment::CONTACT_CONFIRMED => 'Cliente confirmo',
+                                        \App\Models\Appointment::CONTACT_NO_RESPONSE => 'No respondio',
+                                        \App\Models\Appointment::CONTACT_CALL_REQUIRED => 'Requiere llamada',
+                                    ] as $status => $label)
+                                        <form method="POST" action="{{ route('agenda.contact-status', $appointment) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="return_to" value="{{ url()->current() }}">
+                                            <input type="hidden" name="contact_status" value="{{ $status }}">
+                                            <button class="w-full rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57] hover:bg-[#edf7f4]">{{ $label }}</button>
+                                        </form>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     </article>
@@ -120,4 +148,19 @@
             </section>
         </aside>
     </div>
+
+    <script>
+        document.querySelectorAll('[data-copy-target]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const target = document.getElementById(button.dataset.copyTarget);
+
+                if (! target) {
+                    return;
+                }
+
+                await navigator.clipboard.writeText(target.textContent.trim());
+                button.textContent = 'Mensaje copiado';
+            });
+        });
+    </script>
 @endsection

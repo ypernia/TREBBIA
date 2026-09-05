@@ -51,7 +51,23 @@ class AppointmentController extends Controller
             ->take(8)
             ->get();
         $pendingAppointments = $appointments->where('status', Appointment::STATUS_SCHEDULED)->count();
-        $attentionCount = $pendingBookingRequests->count() + $pendingAppointments;
+        $contactFollowUpAppointments = $business->appointments()
+            ->with(['client', 'professional', 'service'])
+            ->where('starts_at', '>=', now($business->timezone)->subDay())
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('source_metadata->reschedule_contact_pending', true)
+                    ->orWhereIn('source_metadata->reschedule_contact_status', [
+                        Appointment::CONTACT_PENDING,
+                        Appointment::CONTACT_SENT,
+                        Appointment::CONTACT_NO_RESPONSE,
+                        Appointment::CONTACT_CALL_REQUIRED,
+                    ]);
+            })
+            ->orderBy('starts_at')
+            ->take(6)
+            ->get();
+        $attentionCount = $pendingBookingRequests->count() + $pendingAppointments + $contactFollowUpAppointments->count();
         $upcomingBlockedTimes = $business->blockedTimes()
             ->with(['professional', 'resource'])
             ->where('ends_at', '>=', now($business->timezone))
@@ -70,9 +86,11 @@ class AppointmentController extends Controller
             'appointmentsByDay' => $appointments->groupBy(fn (Appointment $appointment) => $appointment->starts_at->toDateString()),
             'pendingBookingRequests' => $pendingBookingRequests,
             'upcomingBlockedTimes' => $upcomingBlockedTimes,
+            'contactFollowUpAppointments' => $contactFollowUpAppointments,
             'agendaStatus' => [
                 'attention_count' => $attentionCount,
                 'pending_appointments' => $pendingAppointments,
+                'contact_follow_ups' => $contactFollowUpAppointments->count(),
                 'upcoming_blocks' => $upcomingBlockedTimes->count(),
                 'title' => $attentionCount > 0 ? 'Requiere atencion' : 'Todo en orden',
                 'message' => $attentionCount > 0

@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/agenda/bloqueos/{blockedTime}', [BlockedTimeController::class, 'show'])->name('blocked-times.show');
         Route::patch('/agenda/{appointment}/reprogramar', [AppointmentRescheduleController::class, 'update'])->name('agenda.reschedule');
         Route::patch('/agenda/{appointment}/pendiente-contacto', [AppointmentRescheduleController::class, 'markContactPending'])->name('agenda.contact-pending');
+        Route::patch('/agenda/{appointment}/estado-contacto', [AppointmentRescheduleController::class, 'updateContactStatus'])->name('agenda.contact-status');
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::patch('/solicitudes-reserva/{bookingRequest}/aceptar', [BookingRequestController::class, 'accept'])->name('booking-requests.accept');
         Route::patch('/solicitudes-reserva/{bookingRequest}/rechazar', [BookingRequestController::class, 'reject'])->name('booking-requests.reject');

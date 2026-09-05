@@ -7,6 +7,7 @@ use App\Services\BookingEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AppointmentRescheduleController extends Controller
@@ -40,6 +41,7 @@ class AppointmentRescheduleController extends Controller
         $metadata['last_rescheduled_at'] = now()->toISOString();
         $metadata['last_rescheduled_by'] = $request->user()->id;
         $metadata['reschedule_contact_pending'] = true;
+        $metadata['reschedule_contact_status'] = Appointment::CONTACT_PENDING;
 
         $appointment->update([
             'starts_at' => $startsAt,
@@ -47,7 +49,7 @@ class AppointmentRescheduleController extends Controller
             'source_metadata' => $metadata,
         ]);
 
-        return redirect($attributes['return_to'] ?: route('agenda.index', ['date' => $startsAt->toDateString()]))
+        return redirect(($attributes['return_to'] ?? null) ?: route('agenda.index', ['date' => $startsAt->toDateString()]))
             ->with('status', 'Cita reprogramada. Contacta al cliente para confirmar el cambio.');
     }
 
@@ -61,13 +63,35 @@ class AppointmentRescheduleController extends Controller
 
         $metadata = $appointment->source_metadata ?? [];
         $metadata['reschedule_contact_pending'] = true;
+        $metadata['reschedule_contact_status'] = Appointment::CONTACT_PENDING;
         $metadata['reschedule_contact_marked_at'] = now()->toISOString();
         $metadata['reschedule_contact_marked_by'] = $request->user()->id;
 
         $appointment->update(['source_metadata' => $metadata]);
 
-        return redirect($attributes['return_to'] ?: route('agenda.index'))
+        return redirect(($attributes['return_to'] ?? null) ?: route('agenda.index'))
             ->with('status', 'Cita marcada como pendiente por contactar.');
+    }
+
+    public function updateContactStatus(Request $request, Appointment $appointment): RedirectResponse
+    {
+        $this->authorizeTenant($appointment);
+
+        $attributes = $request->validate([
+            'contact_status' => ['required', Rule::in(array_keys(Appointment::contactStatusLabels()))],
+            'return_to' => ['nullable', 'url'],
+        ]);
+
+        $metadata = $appointment->source_metadata ?? [];
+        $metadata['reschedule_contact_status'] = $attributes['contact_status'];
+        $metadata['reschedule_contact_pending'] = $attributes['contact_status'] !== Appointment::CONTACT_CONFIRMED;
+        $metadata['reschedule_contact_updated_at'] = now()->toISOString();
+        $metadata['reschedule_contact_updated_by'] = $request->user()->id;
+
+        $appointment->update(['source_metadata' => $metadata]);
+
+        return redirect(($attributes['return_to'] ?? null) ?: route('agenda.index'))
+            ->with('status', 'Estado de contacto actualizado.');
     }
 
     private function authorizeTenant(Appointment $appointment): void

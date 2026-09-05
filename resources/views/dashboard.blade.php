@@ -26,7 +26,7 @@
                     <p class="mt-1 text-sm leading-6 opacity-90">{{ $todayStatus['message'] }}</p>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[26rem] lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[30rem] lg:grid-cols-5">
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $metrics['todayAppointments'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Citas</p>
@@ -38,6 +38,10 @@
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $metrics['todayProfessionals'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Equipo</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $metrics['contactFollowUps'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Contactar</p>
                 </div>
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $metrics['todayBlockedTimes'] }}</p>
@@ -95,6 +99,24 @@
                                     </form>
                                 </div>
                             </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            @if ($contactFollowUpAppointments->isNotEmpty())
+                <div class="trebbia-card overflow-hidden border-l-4 border-l-[#8a3027]">
+                    <div class="border-b border-[#e7ebe7] p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Seguimiento</p>
+                        <h2 class="mt-1 text-lg font-bold">{{ $contactFollowUpAppointments->count() }} cita{{ $contactFollowUpAppointments->count() === 1 ? '' : 's' }} pendiente{{ $contactFollowUpAppointments->count() === 1 ? '' : 's' }} por contacto</h2>
+                    </div>
+                    <div class="divide-y divide-[#e7ebe7]">
+                        @foreach ($contactFollowUpAppointments as $appointment)
+                            <a href="{{ route('agenda.edit', $appointment) }}" class="block p-5 hover:bg-[#f8faf8]">
+                                <p class="font-bold">{{ $appointment->starts_at->format('d/m/Y H:i') }} - {{ $appointment->service?->name }}</p>
+                                <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }} / {{ $appointment->professional?->name ?: 'Profesional sin asignar' }}</p>
+                                <span class="mt-3 inline-flex rounded-md bg-[#fff7ed] px-2 py-1 text-xs font-bold text-[#8a3027]">{{ $appointment->contactStatusLabel() }}</span>
+                            </a>
                         @endforeach
                     </div>
                 </div>

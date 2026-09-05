@@ -26,7 +26,7 @@
                 <h2 class="mt-1 text-2xl font-bold">{{ $agendaStatus['title'] }}</h2>
                 <p class="mt-1 text-sm leading-6 text-[#64716d]">{{ $agendaStatus['message'] }}</p>
             </div>
-            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[26rem] lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[30rem] lg:grid-cols-5">
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $appointments->count() }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Citas</p>
@@ -38,6 +38,10 @@
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $agendaStatus['pending_appointments'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Pendientes</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $agendaStatus['contact_follow_ups'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Contactar</p>
                 </div>
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $agendaStatus['upcoming_blocks'] }}</p>
@@ -165,6 +169,9 @@
                             @if ($appointment->resource)
                                 <p class="mt-1 text-sm text-[#64716d]">Recurso: {{ $appointment->resource->name }}</p>
                             @endif
+                            @if ($appointment->contactStatusLabel())
+                                <span class="mt-2 inline-flex w-fit rounded-md bg-[#fff7ed] px-2 py-1 text-xs font-bold text-[#8a3027]">{{ $appointment->contactStatusLabel() }}</span>
+                            @endif
                         </div>
                         <span class="w-fit rounded-md px-2 py-1 text-xs font-bold {{ $statusStyles[$appointment->status] ?? 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $statuses[$appointment->status] ?? ucfirst($appointment->status) }}</span>
                         <div class="flex items-center gap-2 md:justify-end">
@@ -217,6 +224,22 @@
                         </div>
                     @empty
                         <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin solicitudes por aprobar.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="trebbia-card p-5">
+                <h2 class="text-lg font-bold">Seguimiento de contacto</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($contactFollowUpAppointments as $appointment)
+                        <a href="{{ route('agenda.edit', $appointment) }}" class="block rounded-md border border-[#e1e6e0] p-4 hover:border-[#b9d8cd]">
+                            <p class="font-bold">{{ $appointment->starts_at->format('d/m H:i') }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $appointment->client?->name ?: 'Cliente sin asignar' }}</p>
+                            <p class="text-sm text-[#64716d]">{{ $appointment->service?->name }} / {{ $appointment->professional?->name }}</p>
+                            <span class="mt-3 inline-flex rounded-md bg-[#fff7ed] px-2 py-1 text-xs font-bold text-[#8a3027]">{{ $appointment->contactStatusLabel() }}</span>
+                        </a>
+                    @empty
+                        <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin citas pendientes por contactar.</p>
                     @endforelse
                 </div>
             </section>

@@ -886,6 +886,66 @@ class TrebbiaFlowTest extends TestCase
         $this->assertTrue($appointment->source_metadata['reschedule_contact_pending']);
     }
 
+    public function test_rescheduled_appointment_contact_status_can_be_tracked(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create(['name' => 'Laura Contacto', 'phone' => '573001112233']);
+        $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Seguimiento', 'is_active' => true]);
+
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => now($business->timezone)->addDay()->setTime(10, 0),
+            'ends_at' => now($business->timezone)->addDay()->setTime(11, 0),
+            'status' => Appointment::STATUS_CONFIRMED,
+            'source_metadata' => [
+                'reschedule_contact_pending' => true,
+                'reschedule_contact_status' => Appointment::CONTACT_PENDING,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('agenda.contact-status', $appointment), [
+                'contact_status' => Appointment::CONTACT_SENT,
+                'return_to' => route('agenda.index'),
+            ])
+            ->assertRedirect(route('agenda.index'));
+
+        $appointment->refresh();
+
+        $this->assertSame(Appointment::CONTACT_SENT, $appointment->source_metadata['reschedule_contact_status']);
+        $this->assertTrue($appointment->source_metadata['reschedule_contact_pending']);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.index'))
+            ->assertOk()
+            ->assertSee('Seguimiento de contacto')
+            ->assertSee('Mensaje enviado');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('pendiente por contacto')
+            ->assertSee('Mensaje enviado');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('agenda.contact-status', $appointment), [
+                'contact_status' => Appointment::CONTACT_CONFIRMED,
+            ])
+            ->assertRedirect(route('agenda.index'));
+
+        $appointment->refresh();
+
+        $this->assertSame(Appointment::CONTACT_CONFIRMED, $appointment->source_metadata['reschedule_contact_status']);
+        $this->assertFalse($appointment->source_metadata['reschedule_contact_pending']);
+    }
+
     public function test_blocked_time_rejects_professional_from_another_business(): void
     {
         [$user, $business] = $this->tenantUser();
