@@ -26,7 +26,7 @@
                 <h2 class="mt-1 text-2xl font-bold">{{ $agendaStatus['title'] }}</h2>
                 <p class="mt-1 text-sm leading-6 text-[#64716d]">{{ $agendaStatus['message'] }}</p>
             </div>
-            <div class="grid grid-cols-3 gap-3 text-center sm:min-w-[24rem]">
+            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[26rem] lg:grid-cols-4">
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $appointments->count() }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Citas</p>
@@ -38,6 +38,10 @@
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $agendaStatus['pending_appointments'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Pendientes</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $agendaStatus['upcoming_blocks'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] text-[#64716d]">Bloqueos</p>
                 </div>
             </div>
         </div>
@@ -85,7 +89,10 @@
             </div>
             <button class="trebbia-button trebbia-button-secondary">Filtrar</button>
         </form>
-        <a class="trebbia-button" href="{{ route('agenda.create', ['date' => $date->format('Y-m-d')]) }}">Nueva cita</a>
+        <div class="flex flex-col gap-2 sm:flex-row">
+            <a class="trebbia-button trebbia-button-secondary" href="{{ route('blocked-times.create', ['date' => $date->format('Y-m-d')]) }}">Bloquear tiempo</a>
+            <a class="trebbia-button" href="{{ route('agenda.create', ['date' => $date->format('Y-m-d')]) }}">Nueva cita</a>
+        </div>
     </div>
 
     <div class="mb-5 flex flex-wrap gap-2">
@@ -210,6 +217,29 @@
                         </div>
                     @empty
                         <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin solicitudes por aprobar.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="trebbia-card p-5">
+                <h2 class="text-lg font-bold">Bloqueos proximos</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($upcomingBlockedTimes as $blockedTime)
+                        <div class="rounded-md border border-[#e1e6e0] p-4">
+                            <p class="font-bold">{{ $blockedTime->starts_at->format('d/m H:i') }} - {{ $blockedTime->ends_at->format('H:i') }}</p>
+                            <p class="mt-1 text-sm text-[#64716d]">{{ $blockedTime->reason ?: 'Bloqueo de agenda' }}</p>
+                            <p class="text-sm text-[#64716d]">
+                                @if ($blockedTime->professional)
+                                    Profesional: {{ $blockedTime->professional->name }}
+                                @elseif ($blockedTime->resource)
+                                    Recurso: {{ $blockedTime->resource->name }}
+                                @else
+                                    Agenda general
+                                @endif
+                            </p>
+                        </div>
+                    @empty
+                        <p class="rounded-md border border-dashed border-[#cfd8d2] p-4 text-sm text-[#64716d]">Sin bloqueos proximos.</p>
                     @endforelse
                 </div>
             </section>

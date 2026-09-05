@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminWhatsAppController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingRequestController;
 use App\Http\Controllers\AutomationController;
+use App\Http\Controllers\BlockedTimeController;
 use App\Http\Controllers\BusinessSetupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClinicalRecordController;
@@ -90,6 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/onboarding/{step?}', [OnboardingController::class, 'show'])->name('onboarding.show');
         Route::post('/onboarding/{step}', [OnboardingController::class, 'store'])->name('onboarding.store');
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::get('/agenda/bloqueos/nuevo', [BlockedTimeController::class, 'create'])->name('blocked-times.create');
+        Route::post('/agenda/bloqueos', [BlockedTimeController::class, 'store'])->name('blocked-times.store');
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::patch('/solicitudes-reserva/{bookingRequest}/aceptar', [BookingRequestController::class, 'accept'])->name('booking-requests.accept');
         Route::patch('/solicitudes-reserva/{bookingRequest}/rechazar', [BookingRequestController::class, 'reject'])->name('booking-requests.reject');

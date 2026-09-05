@@ -12,4 +12,24 @@ class BlockedTime extends Model
     {
         return ['starts_at' => 'datetime', 'ends_at' => 'datetime'];
     }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function professional()
+    {
+        return $this->belongsTo(Professional::class);
+    }
+
+    public function resource()
+    {
+        return $this->belongsTo(Resource::class);
+    }
 }

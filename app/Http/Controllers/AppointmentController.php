@@ -52,6 +52,12 @@ class AppointmentController extends Controller
             ->get();
         $pendingAppointments = $appointments->where('status', Appointment::STATUS_SCHEDULED)->count();
         $attentionCount = $pendingBookingRequests->count() + $pendingAppointments;
+        $upcomingBlockedTimes = $business->blockedTimes()
+            ->with(['professional', 'resource'])
+            ->where('ends_at', '>=', now($business->timezone))
+            ->orderBy('starts_at')
+            ->take(6)
+            ->get();
 
         return view('appointments.index', [
             'business' => $business,
@@ -63,9 +69,11 @@ class AppointmentController extends Controller
             'appointments' => $appointments,
             'appointmentsByDay' => $appointments->groupBy(fn (Appointment $appointment) => $appointment->starts_at->toDateString()),
             'pendingBookingRequests' => $pendingBookingRequests,
+            'upcomingBlockedTimes' => $upcomingBlockedTimes,
             'agendaStatus' => [
                 'attention_count' => $attentionCount,
                 'pending_appointments' => $pendingAppointments,
+                'upcoming_blocks' => $upcomingBlockedTimes->count(),
                 'title' => $attentionCount > 0 ? 'Requiere atencion' : 'Todo en orden',
                 'message' => $attentionCount > 0
                     ? 'Hay solicitudes o citas pendientes que conviene revisar antes de continuar.'

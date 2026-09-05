@@ -15,6 +15,7 @@ class DashboardController extends Controller
         $today = today($business->timezone);
         $pendingRequestsQuery = $business->bookingRequests()->where('status', BookingRequest::STATUS_PENDING);
         $todayAppointmentsQuery = $business->appointments()->whereDate('starts_at', $today);
+        $todayBlockedTimesQuery = $business->blockedTimes()->whereDate('starts_at', $today);
         $todayPendingAppointments = (clone $todayAppointmentsQuery)->where('status', Appointment::STATUS_SCHEDULED)->count();
         $attentionCount = (clone $pendingRequestsQuery)->count() + $todayPendingAppointments;
 
@@ -34,6 +35,7 @@ class DashboardController extends Controller
                 'todayPendingAppointments' => $todayPendingAppointments,
                 'upcomingAppointments' => $business->appointments()->where('starts_at', '>=', now())->count(),
                 'pendingRequests' => (clone $pendingRequestsQuery)->count(),
+                'todayBlockedTimes' => (clone $todayBlockedTimesQuery)->count(),
                 'todayProfessionals' => $business->appointments()
                     ->whereDate('starts_at', $today)
                     ->whereNotNull('professional_id')
@@ -49,6 +51,12 @@ class DashboardController extends Controller
                 ->whereDate('starts_at', $today)
                 ->orderBy('starts_at')
                 ->take(6)
+                ->get(),
+            'todayBlockedTimes' => $business->blockedTimes()
+                ->with(['professional', 'resource'])
+                ->whereDate('starts_at', $today)
+                ->orderBy('starts_at')
+                ->take(5)
                 ->get(),
             'upcomingAppointments' => $business->appointments()
                 ->with(['client', 'professional', 'service'])

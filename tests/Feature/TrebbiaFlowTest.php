@@ -769,6 +769,98 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_blocked_time_preview_shows_affected_appointments_before_saving(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $client = $business->clients()->create(['name' => 'Maria Impacto']);
+        $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 09:00:00',
+            'ends_at' => '2026-09-07 10:00:00',
+            'status' => Appointment::STATUS_SCHEDULED,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('blocked-times.create', [
+                'preview' => 1,
+                'scope' => 'professional',
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '08:00',
+                'ends_at' => '12:00',
+                'reason' => 'Enfermedad',
+            ]))
+            ->assertOk()
+            ->assertSee('Impacto detectado')
+            ->assertSee('1 cita afectada')
+            ->assertSee('Maria Impacto');
+
+        $this->assertDatabaseCount('blocked_times', 0);
+    }
+
+    public function test_blocked_time_can_be_saved_after_impact_confirmation_and_appears_in_agenda(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('blocked-times.store'), [
+                'scope' => 'professional',
+                'professional_id' => $professional->id,
+                'date' => now($business->timezone)->addDay()->toDateString(),
+                'starts_at' => '13:00',
+                'ends_at' => '15:00',
+                'reason' => 'Incapacidad',
+                'confirm_impact' => 1,
+            ])
+            ->assertRedirect(route('agenda.index', ['date' => now($business->timezone)->addDay()->toDateString()]));
+
+        $this->assertDatabaseHas('blocked_times', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'reason' => 'Incapacidad',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('agenda.index'))
+            ->assertOk()
+            ->assertSee('Bloqueos proximos')
+            ->assertSee('Incapacidad');
+    }
+
+    public function test_blocked_time_rejects_professional_from_another_business(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        [, $otherBusiness] = $this->tenantUser('Otra Clinica', 'other-owner@example.com');
+        $otherProfessional = $otherBusiness->professionals()->create(['name' => 'Profesional externo', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('blocked-times.create'))
+            ->post(route('blocked-times.store'), [
+                'scope' => 'professional',
+                'professional_id' => $otherProfessional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '13:00',
+                'ends_at' => '15:00',
+                'reason' => 'Otro',
+                'confirm_impact' => 1,
+            ])
+            ->assertRedirect(route('blocked-times.create'))
+            ->assertSessionHasErrors('professional_id');
+
+        $this->assertDatabaseCount('blocked_times', 0);
+    }
+
     public function test_appointment_cannot_overlap_same_professional(): void
     {
         [$user, $business] = $this->tenantUser();

@@ -26,7 +26,7 @@
                     <p class="mt-1 text-sm leading-6 opacity-90">{{ $todayStatus['message'] }}</p>
                 </div>
             </div>
-            <div class="grid grid-cols-3 gap-3 text-center sm:min-w-[24rem]">
+            <div class="grid grid-cols-2 gap-3 text-center sm:min-w-[26rem] lg:grid-cols-4">
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $metrics['todayAppointments'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Citas</p>
@@ -38,6 +38,10 @@
                 <div class="rounded-md bg-white/70 p-3">
                     <p class="text-2xl font-bold">{{ $metrics['todayProfessionals'] }}</p>
                     <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Equipo</p>
+                </div>
+                <div class="rounded-md bg-white/70 p-3">
+                    <p class="text-2xl font-bold">{{ $metrics['todayBlockedTimes'] }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.12em] opacity-70">Bloqueos</p>
                 </div>
             </div>
         </div>
@@ -165,6 +169,32 @@
                     </div>
                 @endif
             </div>
+
+            @if ($todayBlockedTimes->isNotEmpty())
+                <div class="trebbia-card overflow-hidden">
+                    <div class="border-b border-[#e7ebe7] p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Disponibilidad</p>
+                        <h2 class="mt-1 text-lg font-bold">Bloqueos de hoy</h2>
+                    </div>
+                    <div class="divide-y divide-[#e7ebe7]">
+                        @foreach ($todayBlockedTimes as $blockedTime)
+                            <div class="p-5">
+                                <p class="font-bold">{{ $blockedTime->starts_at->format('H:i') }} - {{ $blockedTime->ends_at->format('H:i') }}</p>
+                                <p class="mt-1 text-sm text-[#64716d]">{{ $blockedTime->reason ?: 'Bloqueo de agenda' }}</p>
+                                <p class="text-sm text-[#64716d]">
+                                    @if ($blockedTime->professional)
+                                        Profesional: {{ $blockedTime->professional->name }}
+                                    @elseif ($blockedTime->resource)
+                                        Recurso: {{ $blockedTime->resource->name }}
+                                    @else
+                                        Agenda general
+                                    @endif
+                                </p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </section>
 
         <aside class="space-y-6">
