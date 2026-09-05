@@ -43,7 +43,13 @@
 
         @if ($errors->any())
             <div class="mb-5 rounded-md border border-[#f0c9c4] bg-[#fff4f2] px-4 py-3 text-sm font-semibold text-[#8a3027]">
-                Revisa la informacion de tu reserva.
+                {{ $errors->first('starts_at') ?: 'Revisa la informacion de tu reserva.' }}
+                @if (! empty($bookingAlternatives))
+                    <div class="mt-3 text-[#53615d]">
+                        <p class="font-bold text-[#18211f]">Opciones disponibles:</p>
+                        <p>{{ implode(' · ', $bookingAlternatives) }}</p>
+                    </div>
+                @endif
             </div>
         @endif
 

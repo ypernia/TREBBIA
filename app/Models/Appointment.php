@@ -27,6 +27,7 @@ class Appointment extends Model
         'status',
         'source_channel',
         'source_reference',
+        'idempotency_key',
         'source_metadata',
         'notes',
     ];

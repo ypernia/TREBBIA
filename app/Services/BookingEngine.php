@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\AppointmentSlotLock;
 use App\Models\Business;
 use App\Models\Client;
 use App\Models\Service;
@@ -115,6 +116,14 @@ class BookingEngine
         );
     }
 
+    public function alternativeSlots(Business $business, Service $service, int $professionalId, CarbonImmutable $date, ?int $resourceId = null, ?string $afterTime = null, int $limit = 3): Collection
+    {
+        return $this->availableSlots($business, $service, $professionalId, $date, $resourceId)
+            ->when($afterTime, fn (Collection $slots): Collection => $slots->filter(fn (CarbonImmutable $slot): bool => $slot->format('H:i') !== $afterTime))
+            ->take($limit)
+            ->values();
+    }
+
     public function createAppointment(Business $business, array $attributes): Appointment
     {
         if (! $this->entitlements->can($business, 'appointment.create')) {
@@ -135,6 +144,18 @@ class BookingEngine
             $resourceId = ($attributes['resource_id'] ?? null) ? (int) $attributes['resource_id'] : null;
             $clientId = ($attributes['client_id'] ?? null) ? (int) $attributes['client_id'] : null;
             $branchId = ($attributes['branch_id'] ?? null) ? (int) $attributes['branch_id'] : null;
+            $sourceChannel = $attributes['source_channel'] ?? Appointment::SOURCE_INTERNAL;
+            $idempotencyKey = $attributes['idempotency_key'] ?? $this->idempotencyKey($business, $attributes, $sourceChannel);
+
+            if ($idempotencyKey) {
+                $existingAppointment = $business->appointments()
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+
+                if ($existingAppointment) {
+                    return $existingAppointment;
+                }
+            }
 
             $business->professionals()->where('is_active', true)->findOrFail($professionalId);
 
@@ -150,10 +171,17 @@ class BookingEngine
                 $business->branches()->where('is_active', true)->findOrFail($branchId);
             }
 
+            $this->lockBookingScopes($business, $startsAt, $professionalId, $resourceId);
+
             $errors = $this->availability->validate($business, $service, $startsAt, $endsAt, $professionalId, $resourceId);
 
             if ($errors !== []) {
-                throw ValidationException::withMessages(['starts_at' => $errors]);
+                throw ValidationException::withMessages([
+                    'starts_at' => array_merge(
+                        ['Ese horario acaba de ser reservado o ya no esta disponible.'],
+                        $errors,
+                    ),
+                ]);
             }
 
             return $business->appointments()->create([
@@ -165,8 +193,9 @@ class BookingEngine
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
                 'status' => $attributes['status'] ?? 'scheduled',
-                'source_channel' => $attributes['source_channel'] ?? Appointment::SOURCE_INTERNAL,
+                'source_channel' => $sourceChannel,
                 'source_reference' => $attributes['source_reference'] ?? null,
+                'idempotency_key' => $idempotencyKey,
                 'source_metadata' => $attributes['source_metadata'] ?? null,
                 'notes' => $attributes['notes'] ?? null,
             ]);
@@ -191,5 +220,56 @@ class BookingEngine
             'phone' => $attributes['client_phone'] ?? null,
             'is_active' => true,
         ]);
+    }
+
+    private function lockBookingScopes(Business $business, CarbonImmutable $startsAt, int $professionalId, ?int $resourceId): void
+    {
+        collect([
+            ['scope' => 'professional', 'scope_id' => $professionalId],
+            $resourceId ? ['scope' => 'resource', 'scope_id' => $resourceId] : null,
+        ])
+            ->filter()
+            ->map(fn (array $scope): array => [
+                ...$scope,
+                'lock_key' => $this->lockKey($business, $startsAt, $scope['scope'], $scope['scope_id']),
+            ])
+            ->sortBy('lock_key')
+            ->each(function (array $scope) use ($business, $startsAt): void {
+                $lock = AppointmentSlotLock::query()->createOrFirst(
+                    ['lock_key' => $scope['lock_key']],
+                    [
+                        'business_id' => $business->id,
+                        'lock_date' => $startsAt->toDateString(),
+                        'scope' => $scope['scope'],
+                        'scope_id' => $scope['scope_id'],
+                    ],
+                );
+
+                AppointmentSlotLock::whereKey($lock->id)->lockForUpdate()->first();
+            });
+    }
+
+    private function lockKey(Business $business, CarbonImmutable $startsAt, string $scope, int $scopeId): string
+    {
+        return implode(':', [
+            'business',
+            $business->id,
+            $startsAt->toDateString(),
+            $scope,
+            $scopeId,
+        ]);
+    }
+
+    private function idempotencyKey(Business $business, array $attributes, string $sourceChannel): ?string
+    {
+        if (empty($attributes['source_reference']) || $sourceChannel === Appointment::SOURCE_INTERNAL) {
+            return null;
+        }
+
+        return hash('sha256', implode('|', [
+            $business->id,
+            $sourceChannel,
+            $attributes['source_reference'],
+        ]));
     }
 }

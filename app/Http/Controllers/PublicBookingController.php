@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PublicBookingController extends Controller
@@ -39,6 +40,7 @@ class PublicBookingController extends Controller
             'availableSlots' => $selectedService && $selectedProfessional
                 ? $this->booking->availableSlots($business, $selectedService, $selectedProfessional->id, $date)
                 : collect(),
+            'bookingAlternatives' => session('booking_alternatives', []),
         ]);
     }
 
@@ -63,19 +65,42 @@ class PublicBookingController extends Controller
         $settings = $business->settings()->firstOrCreate([]);
         $requiresConfirmation = (bool) ($settings->public_booking_settings['require_manual_confirmation'] ?? true);
 
-        $appointment = $this->booking->createAppointment($business, [
-            'client_id' => $client->id,
-            'service_id' => $service->id,
-            'professional_id' => $attributes['professional_id'],
-            'starts_at' => $startsAt,
-            'status' => $requiresConfirmation ? 'scheduled' : 'confirmed',
-            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
-            'source_metadata' => [
-                'client_email' => $attributes['client_email'] ?? null,
-                'client_phone' => $attributes['client_phone'] ?? null,
-            ],
-            'notes' => $attributes['notes'] ?? null,
-        ]);
+        try {
+            $appointment = $this->booking->createAppointment($business, [
+                'client_id' => $client->id,
+                'service_id' => $service->id,
+                'professional_id' => $attributes['professional_id'],
+                'starts_at' => $startsAt,
+                'status' => $requiresConfirmation ? 'scheduled' : 'confirmed',
+                'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+                'source_reference' => $this->publicSourceReference($business, $attributes),
+                'source_metadata' => [
+                    'client_email' => $attributes['client_email'] ?? null,
+                    'client_phone' => $attributes['client_phone'] ?? null,
+                ],
+                'notes' => $attributes['notes'] ?? null,
+            ]);
+        } catch (ValidationException) {
+            $alternatives = $this->booking->alternativeSlots(
+                $business,
+                $service,
+                (int) $attributes['professional_id'],
+                CarbonImmutable::parse($attributes['date'], $business->timezone),
+                null,
+                $attributes['starts_at'],
+            )->map->format('H:i')->all();
+
+            return redirect()
+                ->route('public-booking.show', [
+                    'business' => $business->slug,
+                    'service_id' => $attributes['service_id'],
+                    'professional_id' => $attributes['professional_id'],
+                    'date' => $attributes['date'],
+                ])
+                ->withInput()
+                ->withErrors(['starts_at' => 'Ese horario acaba de ser reservado. Encontramos otras opciones disponibles.'])
+                ->with('booking_alternatives', $alternatives);
+        }
 
         return redirect()->route('public-booking.confirmation', [$business->slug, 'appointment' => $appointment->id]);
     }
@@ -103,5 +128,19 @@ class PublicBookingController extends Controller
         return $business->status === 'active'
             && $subscription->hasOperationalAccess()
             && (bool) ($settings->public_booking_settings['allow_public_booking'] ?? false);
+    }
+
+    private function publicSourceReference(Business $business, array $attributes): string
+    {
+        return 'public:'.hash('sha256', implode('|', [
+            $business->id,
+            $attributes['service_id'],
+            $attributes['professional_id'],
+            $attributes['date'],
+            $attributes['starts_at'],
+            strtolower((string) ($attributes['client_email'] ?? '')),
+            preg_replace('/\D+/', '', (string) ($attributes['client_phone'] ?? '')),
+            mb_strtolower(trim((string) $attributes['client_name'])),
+        ]));
     }
 }

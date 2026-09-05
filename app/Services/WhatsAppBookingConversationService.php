@@ -121,6 +121,7 @@ class WhatsAppBookingConversationService
             'client_name' => $contact->name ?: 'Cliente WhatsApp '.$contact->phone,
             'client_phone' => $contact->phone,
         ]);
+        $service = $this->booking->service($business, $data['service_id']);
         $startsAt = CarbonImmutable::parse($data['date'].' '.$time, $business->timezone);
 
         try {
@@ -135,7 +136,24 @@ class WhatsAppBookingConversationService
                 'source_metadata' => ['simulated' => ! str_starts_with($settings['mode'] ?? 'link', 'cloud_api')],
             ]);
         } catch (ValidationException) {
-            return 'Ese horario dejo de estar disponible. Vuelve a consultar otra fecha u horario.';
+            $alternatives = $this->booking->alternativeSlots(
+                $business,
+                $service,
+                (int) $data['professional_id'],
+                CarbonImmutable::parse($data['date'], $business->timezone),
+                null,
+                $time,
+            )->map->format('H:i')->all();
+
+            $this->setConversationState($conversation, 'booking', 'awaiting_time', [
+                ...$data,
+                'time' => null,
+                'slots' => $alternatives,
+            ]);
+
+            return $alternatives === []
+                ? 'Ese horario acaba de ser reservado. No encontre mas opciones para esa fecha; probemos con otro dia.'
+                : "Ese horario acaba de ser reservado, pero encontre estas opciones:\n\n".implode("\n", $alternatives)."\n\nEscribe el horario que prefieres.";
         }
 
         $conversation->update([

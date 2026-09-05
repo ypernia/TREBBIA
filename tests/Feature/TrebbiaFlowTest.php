@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
+use App\Models\AppointmentSlotLock;
 use App\Models\BlockedTime;
 use App\Models\Business;
 use App\Models\BusinessInvitation;
@@ -1533,6 +1534,38 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_public_booking_retries_do_not_duplicate_the_same_appointment(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => true,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta idempotente', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Idempotencia', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+        $payload = [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+            'starts_at' => '10:00',
+            'client_name' => 'Cliente Doble Click',
+            'client_email' => 'doble@example.com',
+            'client_phone' => '3005556677',
+        ];
+
+        $this->post(route('public-booking.store', $business->slug), $payload)->assertRedirect();
+        $this->post(route('public-booking.store', $business->slug), $payload)->assertRedirect();
+
+        $this->assertSame(1, $business->appointments()->where('starts_at', '2026-09-07 10:00:00')->count());
+        $this->assertDatabaseCount('appointment_slot_locks', 1);
+    }
+
     public function test_booking_engine_returns_available_slots_and_respects_blocked_times(): void
     {
         [, $business] = $this->tenantUser();
@@ -1557,6 +1590,44 @@ class TrebbiaFlowTest extends TestCase
 
         $this->assertNotContains('09:00', $slots->map->format('H:i')->all());
         $this->assertContains('10:00', $slots->map->format('H:i')->all());
+    }
+
+    public function test_booking_engine_creates_day_lock_before_confirming_appointment(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update(['booking_notice_minutes' => 0]);
+        $service = $business->services()->create(['name' => 'Reserva con lock', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dr. Lock', 'is_active' => true]);
+        $resource = $business->resources()->create(['name' => 'Camilla 1', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        app(BookingEngine::class)->createAppointment($business, [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'resource_id' => $resource->id,
+            'starts_at' => CarbonImmutable::parse('2026-09-07 10:00', $business->timezone),
+            'status' => 'scheduled',
+            'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+            'source_reference' => 'public:test-lock',
+        ]);
+
+        $this->assertDatabaseHas('appointment_slot_locks', [
+            'business_id' => $business->id,
+            'lock_date' => '2026-09-07 00:00:00',
+            'scope' => 'professional',
+            'scope_id' => $professional->id,
+        ]);
+        $this->assertDatabaseHas('appointment_slot_locks', [
+            'business_id' => $business->id,
+            'lock_date' => '2026-09-07 00:00:00',
+            'scope' => 'resource',
+            'scope_id' => $resource->id,
+        ]);
+        $this->assertDatabaseHas('appointments', [
+            'business_id' => $business->id,
+            'source_reference' => 'public:test-lock',
+            'idempotency_key' => hash('sha256', $business->id.'|'.Appointment::SOURCE_PUBLIC_BOOKING.'|public:test-lock'),
+        ]);
     }
 
     public function test_booking_engine_prevents_creating_appointment_on_blocked_time(): void
