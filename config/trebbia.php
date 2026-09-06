@@ -166,6 +166,63 @@ return [
         ],
     ],
 
+    'service_presets' => [
+        'default' => [
+            ['name' => 'Consulta inicial', 'duration_minutes' => 60, 'price' => 80000, 'description' => 'Primera atencion para conocer la necesidad del cliente.'],
+            ['name' => 'Servicio estandar', 'duration_minutes' => 45, 'price' => 70000, 'description' => 'Atencion principal del negocio.'],
+            ['name' => 'Seguimiento', 'duration_minutes' => 30, 'price' => 50000, 'description' => 'Cita corta para control, ajuste o continuidad.'],
+        ],
+        'fisioterapia' => [
+            ['name' => 'Valoracion inicial', 'duration_minutes' => 60, 'price' => 90000, 'description' => 'Evaluacion inicial del paciente y definicion del plan de tratamiento.'],
+            ['name' => 'Fisioterapia traumatologica', 'duration_minutes' => 60, 'price' => 85000, 'description' => 'Sesion enfocada en lesiones musculares, articulares o postoperatorias.'],
+            ['name' => 'Rehabilitacion deportiva', 'duration_minutes' => 60, 'price' => 95000, 'description' => 'Trabajo de recuperacion y retorno progresivo a la actividad fisica.'],
+            ['name' => 'Terapia manual', 'duration_minutes' => 45, 'price' => 80000, 'description' => 'Sesion de tecnicas manuales para movilidad, dolor y funcion.'],
+        ],
+        'salud' => [
+            ['name' => 'Consulta inicial', 'duration_minutes' => 60, 'price' => 90000, 'description' => 'Primera valoracion y apertura de proceso de atencion.'],
+            ['name' => 'Control', 'duration_minutes' => 30, 'price' => 60000, 'description' => 'Seguimiento de evolucion, recomendaciones y ajustes.'],
+            ['name' => 'Procedimiento ambulatorio', 'duration_minutes' => 45, 'price' => 120000, 'description' => 'Atencion programada con preparacion y registro clinico.'],
+        ],
+        'belleza' => [
+            ['name' => 'Limpieza facial', 'duration_minutes' => 60, 'price' => 120000, 'description' => 'Tratamiento facial base para limpieza y cuidado de piel.'],
+            ['name' => 'Masaje relajante', 'duration_minutes' => 60, 'price' => 110000, 'description' => 'Sesion de bienestar y relajacion corporal.'],
+            ['name' => 'Tratamiento corporal', 'duration_minutes' => 75, 'price' => 160000, 'description' => 'Atencion corporal especializada segun necesidad del cliente.'],
+            ['name' => 'Valoracion estetica', 'duration_minutes' => 30, 'price' => 50000, 'description' => 'Revision inicial y recomendacion de tratamiento.'],
+        ],
+        'spa' => [
+            ['name' => 'Masaje relajante', 'duration_minutes' => 60, 'price' => 120000, 'description' => 'Sesion de relajacion y bienestar.'],
+            ['name' => 'Ritual spa', 'duration_minutes' => 90, 'price' => 220000, 'description' => 'Experiencia completa con preparacion, tratamiento y cierre.'],
+            ['name' => 'Limpieza facial', 'duration_minutes' => 60, 'price' => 130000, 'description' => 'Cuidado facial base para limpieza profunda.'],
+        ],
+        'barberia' => [
+            ['name' => 'Corte clasico', 'duration_minutes' => 30, 'price' => 35000, 'description' => 'Corte de cabello tradicional o moderno.'],
+            ['name' => 'Corte y barba', 'duration_minutes' => 50, 'price' => 55000, 'description' => 'Servicio combinado de cabello y arreglo de barba.'],
+            ['name' => 'Barba', 'duration_minutes' => 25, 'price' => 25000, 'description' => 'Perfilado, arreglo o afeitado de barba.'],
+            ['name' => 'Diseno de cejas', 'duration_minutes' => 15, 'price' => 15000, 'description' => 'Perfilado rapido de cejas.'],
+        ],
+        'restaurante' => [
+            ['name' => 'Reserva de mesa', 'duration_minutes' => 90, 'price' => 0, 'description' => 'Reserva estandar para atencion en sala.'],
+            ['name' => 'Celebracion especial', 'duration_minutes' => 120, 'price' => 0, 'description' => 'Reserva para cumpleanos, aniversario o reunion especial.'],
+            ['name' => 'Evento privado', 'duration_minutes' => 180, 'price' => 0, 'description' => 'Bloque de atencion para grupos o eventos.'],
+        ],
+        'servicios profesionales' => [
+            ['name' => 'Consulta inicial', 'duration_minutes' => 60, 'price' => 120000, 'description' => 'Reunion inicial para entender la necesidad y definir alcance.'],
+            ['name' => 'Asesoria especializada', 'duration_minutes' => 60, 'price' => 180000, 'description' => 'Sesion de trabajo con recomendacion profesional.'],
+            ['name' => 'Seguimiento', 'duration_minutes' => 30, 'price' => 90000, 'description' => 'Revision corta de avances, pendientes o decisiones.'],
+        ],
+    ],
+
+    'industry_modules' => [
+        'default' => ['Agenda', 'Clientes', 'Servicios', 'Compartir reservas', 'Contacto WhatsApp'],
+        'fisioterapia' => ['Agenda', 'Clientes', 'Historia clinica', 'Recursos', 'Compartir reservas', 'Contacto WhatsApp'],
+        'salud' => ['Agenda', 'Clientes', 'Historia clinica', 'Recursos', 'Compartir reservas', 'Contacto WhatsApp'],
+        'belleza' => ['Agenda', 'Clientes', 'Recursos', 'Automatizaciones', 'Compartir reservas', 'Contacto WhatsApp'],
+        'spa' => ['Agenda', 'Clientes', 'Recursos', 'Automatizaciones', 'Compartir reservas', 'Contacto WhatsApp'],
+        'barberia' => ['Agenda', 'Clientes', 'Profesionales', 'Recursos', 'Compartir reservas', 'Contacto WhatsApp'],
+        'restaurante' => ['Agenda', 'Clientes', 'Recursos', 'Reportes', 'Compartir reservas', 'Contacto WhatsApp'],
+        'servicios profesionales' => ['Agenda', 'Clientes', 'Servicios', 'Automatizaciones', 'Reportes', 'Contacto WhatsApp'],
+    ],
+
     'resource_presets' => [
         'default' => [
             ['name' => 'Sala 1', 'type' => 'Sala'],

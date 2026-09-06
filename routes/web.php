@@ -102,6 +102,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('agenda', AppointmentController::class)->parameters(['agenda' => 'appointment'])->except(['show']);
         Route::patch('/solicitudes-reserva/{bookingRequest}/aceptar', [BookingRequestController::class, 'accept'])->name('booking-requests.accept');
         Route::patch('/solicitudes-reserva/{bookingRequest}/rechazar', [BookingRequestController::class, 'reject'])->name('booking-requests.reject');
+        Route::post('/servicios/sugeridos', [ServiceController::class, 'storeSuggestions'])->name('servicios.suggestions.store');
         Route::resource('servicios', ServiceController::class)->except(['show']);
         Route::resource('profesionales', ProfessionalController::class)->except(['show']);
         Route::resource('clientes', ClientController::class);

@@ -9,6 +9,41 @@
         <p class="max-w-2xl text-sm text-[#64716d]">Administra el catalogo que luego alimentara la pagina publica de reservas y el motor de disponibilidad.</p>
         <a class="trebbia-button" href="{{ route('servicios.create') }}">Nuevo servicio</a>
     </div>
+    @include('partials.errors')
+
+    @if (! empty($suggestedServices))
+        <section class="trebbia-card mb-6 overflow-hidden">
+            <div class="border-b border-[#e7ebe7] p-5">
+                <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Sugeridos para {{ $business->industry ?: 'tu negocio' }}</p>
+                <h2 class="mt-1 text-lg font-bold">Crea servicios base en segundos</h2>
+                <p class="mt-1 text-sm text-[#64716d]">Selecciona los servicios que aplican y ajustalos despues si necesitas cambiar precio, duracion o descripcion.</p>
+            </div>
+            <form method="POST" action="{{ route('servicios.suggestions.store') }}" class="p-5">
+                @csrf
+                <div class="grid gap-3 lg:grid-cols-2">
+                    @foreach ($suggestedServices as $index => $service)
+                        @php $exists = $business->services()->where('name', $service['name'])->exists(); @endphp
+                        <label class="rounded-md border border-[#e1e6e0] bg-white p-4 {{ $exists ? 'opacity-60' : '' }}">
+                            <span class="flex items-start gap-3">
+                                <input type="hidden" name="services[{{ $index }}][name]" value="{{ $service['name'] }}">
+                                <input type="hidden" name="services[{{ $index }}][duration_minutes]" value="{{ $service['duration_minutes'] }}">
+                                <input type="hidden" name="services[{{ $index }}][price]" value="{{ $service['price'] }}">
+                                <input type="hidden" name="services[{{ $index }}][description]" value="{{ $service['description'] }}">
+                                <input class="mt-1" type="checkbox" name="services[{{ $index }}][selected]" value="1" @checked(! $exists) @disabled($exists)>
+                                <span>
+                                    <span class="block font-bold">{{ $service['name'] }}</span>
+                                    <span class="mt-1 block text-sm text-[#64716d]">{{ $service['duration_minutes'] }} min · ${{ number_format($service['price'], 0, ',', '.') }}</span>
+                                    <span class="mt-1 block text-sm text-[#64716d]">{{ $exists ? 'Ya existe en tu catalogo.' : $service['description'] }}</span>
+                                </span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+                <button class="trebbia-button mt-5">Crear seleccionados</button>
+            </form>
+        </section>
+    @endif
+
     <div class="trebbia-card overflow-hidden">
         @forelse ($services as $service)
             <div class="grid gap-3 border-b border-[#e7ebe7] p-5 md:grid-cols-[1fr_9rem_8rem_10rem_10rem] md:items-center">

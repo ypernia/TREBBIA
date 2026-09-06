@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Resource;
 use App\Services\PlanEntitlements;
+use App\Support\IndustryPresets;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -143,12 +144,6 @@ class ResourceController extends Controller
 
     private function suggestedResources(): array
     {
-        $business = app('activeBusiness');
-        $industry = str($business->industry ?: '')->lower()->ascii()->toString();
-        $presets = config('trebbia.resource_presets');
-        $key = collect(array_keys($presets))
-            ->first(fn (string $presetKey): bool => $presetKey !== 'default' && str_contains($industry, $presetKey));
-
-        return $presets[$key] ?? $presets['default'];
+        return IndustryPresets::resourcesFor(app('activeBusiness'));
     }
 }

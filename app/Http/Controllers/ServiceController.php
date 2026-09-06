@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Service;
 use App\Services\PlanEntitlements;
+use App\Support\IndustryPresets;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,7 @@ class ServiceController extends Controller
         return view('services.index', [
             'business' => $business,
             'services' => $business->services()->withCount('professionals')->latest()->paginate(10),
+            'suggestedServices' => IndustryPresets::servicesFor($business),
         ]);
     }
 
@@ -42,6 +44,47 @@ class ServiceController extends Controller
         $this->syncProfessionals($service, $attributes['professional_ids']);
 
         return redirect()->route('servicios.index')->with('status', 'Servicio creado.');
+    }
+
+    public function storeSuggestions(Request $request)
+    {
+        $business = app('activeBusiness');
+        abort_unless(app(PlanEntitlements::class)->can($business, 'service.manage'), 403);
+
+        $attributes = $request->validate([
+            'services' => ['required', 'array', 'min:1'],
+            'services.*.name' => ['required', 'string', 'max:140'],
+            'services.*.duration_minutes' => ['required', 'integer', 'min:10', 'max:720'],
+            'services.*.price' => ['nullable', 'numeric', 'min:0'],
+            'services.*.description' => ['nullable', 'string', 'max:800'],
+            'services.*.selected' => ['nullable', 'boolean'],
+        ]);
+
+        $created = 0;
+        foreach ($attributes['services'] as $service) {
+            if (! app(PlanEntitlements::class)->hasCapacity($business, 'services')) {
+                break;
+            }
+
+            if (! (bool) ($service['selected'] ?? false)) {
+                continue;
+            }
+
+            if ($business->services()->where('name', $service['name'])->exists()) {
+                continue;
+            }
+
+            $business->services()->create([
+                'name' => $service['name'],
+                'duration_minutes' => $service['duration_minutes'],
+                'price_cents' => (int) round(($service['price'] ?? 0) * 100),
+                'description' => $service['description'] ?? null,
+                'is_active' => true,
+            ]);
+            $created++;
+        }
+
+        return redirect()->route('servicios.index')->with('status', "{$created} servicio(s) creados.");
     }
 
     public function edit(Service $servicio)

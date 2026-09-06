@@ -331,6 +331,78 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_service_suggestions_match_business_industry_and_can_be_created_in_bulk(): void
+    {
+        [$user, $business] = $this->tenantUser('Fisio Demo', 'fisio@example.com');
+        $business->update(['industry' => 'Fisioterapia']);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('servicios.index'))
+            ->assertOk()
+            ->assertSee('Sugeridos para Fisioterapia')
+            ->assertSee('Valoracion inicial')
+            ->assertSee('Rehabilitacion deportiva');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('servicios.suggestions.store'), [
+                'services' => [
+                    [
+                        'name' => 'Valoracion inicial',
+                        'duration_minutes' => 60,
+                        'price' => 90000,
+                        'description' => 'Evaluacion inicial.',
+                        'selected' => 1,
+                    ],
+                    [
+                        'name' => 'Rehabilitacion deportiva',
+                        'duration_minutes' => 60,
+                        'price' => 95000,
+                        'description' => 'Recuperacion deportiva.',
+                        'selected' => 1,
+                    ],
+                ],
+            ])->assertRedirect(route('servicios.index'));
+
+        $this->assertDatabaseHas('services', [
+            'business_id' => $business->id,
+            'name' => 'Valoracion inicial',
+            'duration_minutes' => 60,
+            'price_cents' => 9000000,
+            'is_active' => true,
+        ]);
+        $this->assertSame(2, Service::where('business_id', $business->id)->count());
+    }
+
+    public function test_service_suggestion_bulk_creation_skips_existing_names(): void
+    {
+        [$user, $business] = $this->tenantUser('Barber Demo', 'barber@example.com');
+        $business->update(['industry' => 'Barberia']);
+        $business->services()->create([
+            'name' => 'Corte clasico',
+            'duration_minutes' => 30,
+            'price_cents' => 3500000,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('servicios.suggestions.store'), [
+                'services' => [
+                    [
+                        'name' => 'Corte clasico',
+                        'duration_minutes' => 30,
+                        'price' => 35000,
+                        'description' => 'Corte existente.',
+                        'selected' => 1,
+                    ],
+                ],
+            ])->assertRedirect(route('servicios.index'));
+
+        $this->assertSame(1, Service::where('business_id', $business->id)->where('name', 'Corte clasico')->count());
+    }
+
     public function test_client_profile_shows_contact_status_and_appointment_history(): void
     {
         [$user, $business] = $this->tenantUser();

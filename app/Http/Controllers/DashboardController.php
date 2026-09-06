@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\BookingRequest;
 use App\Services\BookingShareCenter;
+use App\Support\IndustryPresets;
 use Illuminate\Database\Eloquent\Builder;
 
 class DashboardController extends Controller
@@ -59,6 +60,17 @@ class DashboardController extends Controller
                 'services' => $business->services()->where('is_active', true)->count(),
             ],
             'share' => $shareCenter->for($business),
+            'industrySuggestions' => [
+                'services' => collect(IndustryPresets::servicesFor($business))
+                    ->reject(fn (array $service): bool => $business->services()->where('name', $service['name'])->exists())
+                    ->take(4)
+                    ->values(),
+                'resources' => collect(IndustryPresets::resourcesFor($business))
+                    ->reject(fn (array $resource): bool => $business->resources()->where('name', $resource['name'])->exists())
+                    ->take(4)
+                    ->values(),
+                'modules' => IndustryPresets::modulesFor($business),
+            ],
             'todayAppointments' => $business->appointments()
                 ->with(['client', 'professional', 'service'])
                 ->whereDate('starts_at', $today)

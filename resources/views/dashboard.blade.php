@@ -190,6 +190,48 @@
                 </div>
             </div>
 
+            @if ($industrySuggestions['services']->isNotEmpty() || $industrySuggestions['resources']->isNotEmpty() || ! empty($industrySuggestions['modules']))
+                <div class="trebbia-card overflow-hidden">
+                    <div class="border-b border-[#e7ebe7] p-5">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Sugerencias por industria</p>
+                        <h2 class="mt-1 text-lg font-bold">Base recomendada para {{ $business->industry ?: 'este negocio' }}</h2>
+                        <p class="mt-1 text-sm text-[#64716d]">Usa estas sugerencias para configurar mas rapido servicios, recursos y modulos clave.</p>
+                    </div>
+                    <div class="grid gap-4 p-5 lg:grid-cols-3">
+                        <div class="rounded-md border border-[#e1e6e0] bg-[#fbfcfb] p-4">
+                            <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-[#64716d]">Servicios</h3>
+                            <div class="mt-3 space-y-2 text-sm text-[#53615d]">
+                                @forelse ($industrySuggestions['services'] as $service)
+                                    <p>{{ $service['name'] }} · {{ $service['duration_minutes'] }} min</p>
+                                @empty
+                                    <p>Catalogo base completo.</p>
+                                @endforelse
+                            </div>
+                            <a class="mt-4 inline-flex text-sm font-bold text-[#245f57] hover:underline" href="{{ route('servicios.index') }}">Ver servicios sugeridos</a>
+                        </div>
+                        <div class="rounded-md border border-[#e1e6e0] bg-[#fbfcfb] p-4">
+                            <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-[#64716d]">Recursos</h3>
+                            <div class="mt-3 space-y-2 text-sm text-[#53615d]">
+                                @forelse ($industrySuggestions['resources'] as $resource)
+                                    <p>{{ $resource['name'] }} · {{ $resource['type'] }}</p>
+                                @empty
+                                    <p>Recursos base completos.</p>
+                                @endforelse
+                            </div>
+                            <a class="mt-4 inline-flex text-sm font-bold text-[#245f57] hover:underline" href="{{ route('recursos.index') }}">Ver recursos sugeridos</a>
+                        </div>
+                        <div class="rounded-md border border-[#e1e6e0] bg-[#fbfcfb] p-4">
+                            <h3 class="text-sm font-bold uppercase tracking-[0.12em] text-[#64716d]">Modulos clave</h3>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                @foreach ($industrySuggestions['modules'] as $module)
+                                    <span class="rounded-md bg-[#edf7f4] px-2 py-1 text-xs font-bold text-[#245f57]">{{ $module }}</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="trebbia-card p-5">
                 <div class="flex items-center justify-between gap-4">
                     <div>
