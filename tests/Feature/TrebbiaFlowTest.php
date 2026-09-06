@@ -124,9 +124,52 @@ class TrebbiaFlowTest extends TestCase
             ->withSession(['business_id' => $business->id])
             ->get(route('dashboard'))
             ->assertOk()
+            ->assertSee('Configuracion guiada')
+            ->assertSee('Siguiente mejor accion')
             ->assertSee('Estado de hoy')
             ->assertSee('Todo en orden')
             ->assertSee('Agenda de hoy');
+    }
+
+    public function test_dashboard_guided_setup_points_to_next_missing_commercial_step(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Configuracion inicial en progreso')
+            ->assertSee('Crear servicios');
+
+        $service = $business->services()->create([
+            'name' => 'Consulta inicial',
+            'duration_minutes' => 60,
+            'price_cents' => 9000000,
+            'is_active' => true,
+        ]);
+        $professional = $business->professionals()->create([
+            'name' => 'Laura Agenda',
+            'is_active' => true,
+        ]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+        $business->settings()->firstOrCreate([])->update([
+            'public_booking_settings' => ['allow_public_booking' => true],
+            'whatsapp_settings' => [
+                'enabled' => true,
+                'phone' => '573113302090',
+                'entry_message' => 'Hola, quiero agendar una cita',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Casi listo para salir a vender')
+            ->assertSee('Prueba de reserva')
+            ->assertSee('Crear prueba');
     }
 
     public function test_dashboard_and_agenda_surface_pending_booking_requests_as_attention(): void

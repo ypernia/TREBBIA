@@ -12,7 +12,40 @@
         $statusIconTone = $todayStatus['state'] === 'attention'
             ? 'bg-[#ffe4d6] text-[#8a3027]'
             : 'bg-[#dff4ed] text-[#0f5f59]';
+        $readinessTone = match ($share['readiness']['tone']) {
+            'ready' => 'border-[#b9dfd5] bg-[#edf8f5]',
+            'progress' => 'border-[#dbe7f5] bg-[#f4f8ff]',
+            default => 'border-[#e7ebe7] bg-white',
+        };
     @endphp
+
+    <section class="trebbia-card mb-6 overflow-hidden border {{ $readinessTone }}">
+        <div class="grid gap-6 p-5 xl:grid-cols-[1fr_22rem] xl:items-center">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#64716d]">Configuracion guiada</p>
+                <h2 class="mt-1 text-2xl font-bold">{{ $share['readiness']['title'] }}</h2>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-[#64716d]">{{ $share['readiness']['message'] }}</p>
+                <div class="mt-5 h-2 overflow-hidden rounded-full bg-white/80">
+                    <div class="h-full rounded-full bg-[#245f57]" style="width: {{ $share['percent'] }}%"></div>
+                </div>
+                <p class="mt-2 text-sm font-semibold text-[#245f57]">{{ $share['completed'] }} de {{ $share['total'] }} pasos listos · {{ $share['percent'] }}%</p>
+            </div>
+
+            <div class="rounded-md border border-[#d7ddd7] bg-white p-4">
+                @if ($share['next_action'])
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#64716d]">Siguiente mejor accion</p>
+                    <h3 class="mt-2 text-lg font-bold">{{ $share['next_action']['label'] }}</h3>
+                    <p class="mt-1 text-sm leading-6 text-[#64716d]">{{ $share['next_action']['why'] }}</p>
+                    <a class="trebbia-button mt-4 w-full justify-center" href="{{ $share['next_action']['action'] }}">{{ $share['next_action']['action_label'] }}</a>
+                @else
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#64716d]">Todo listo</p>
+                    <h3 class="mt-2 text-lg font-bold">Prueba y comparte</h3>
+                    <p class="mt-1 text-sm leading-6 text-[#64716d]">Ya puedes compartir el enlace publico o WhatsApp del negocio.</p>
+                    <a class="trebbia-button mt-4 w-full justify-center" href="{{ route('sharing.index') }}">Compartir reservas</a>
+                @endif
+            </div>
+        </div>
+    </section>
 
     <section class="trebbia-card mb-6 overflow-hidden border {{ $statusTone }}">
         <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -223,8 +256,8 @@
         <aside class="space-y-6">
             <section class="trebbia-card overflow-hidden">
                 <div class="border-b border-[#e7ebe7] p-5">
-                    <h2 class="text-lg font-bold">Checklist de activacion</h2>
-                    <p class="mt-1 text-sm text-[#64716d]">{{ $share['completed'] }} de {{ $share['total'] }} pasos listos.</p>
+                    <h2 class="text-lg font-bold">Ruta de activacion</h2>
+                    <p class="mt-1 text-sm text-[#64716d]">Pasos recomendados para dejar el negocio listo.</p>
                 </div>
                 <div class="divide-y divide-[#e7ebe7]">
                     @foreach ($share['checklist'] as $item)
@@ -232,8 +265,14 @@
                             <div class="flex items-start gap-3">
                                 <span class="mt-1 h-3 w-3 rounded-full {{ $item['complete'] ? 'bg-[#245f57]' : 'bg-[#cfd8d2]' }}"></span>
                                 <div>
-                                    <p class="text-sm font-bold">{{ $item['label'] }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-sm font-bold">{{ $item['label'] }}</p>
+                                        <span class="rounded-md bg-[#f1f4f1] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[#64716d]">{{ $item['group'] }}</span>
+                                    </div>
                                     <p class="mt-1 text-xs text-[#64716d]">{{ $item['description'] }}</p>
+                                    @unless ($item['complete'])
+                                        <p class="mt-1 text-xs font-semibold text-[#245f57]">{{ $item['action_label'] }}</p>
+                                    @endunless
                                 </div>
                             </div>
                         </a>
