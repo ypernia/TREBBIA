@@ -116,6 +116,64 @@ class TrebbiaFlowTest extends TestCase
             ->assertRedirect(route('business.create'));
     }
 
+    public function test_onboarding_service_duplicate_returns_validation_instead_of_server_error(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $business->services()->create([
+            'name' => 'Consulta inicial',
+            'duration_minutes' => 60,
+            'price_cents' => 9000000,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('onboarding.show', ['step' => 'servicio']))
+            ->post(route('onboarding.store', 'servicio'), [
+                'name' => 'Consulta inicial',
+                'duration_minutes' => 60,
+                'price' => 90000,
+                'description' => 'Servicio repetido.',
+            ])
+            ->assertRedirect(route('onboarding.show', ['step' => 'servicio']))
+            ->assertSessionHasErrors('name');
+    }
+
+    public function test_new_trial_business_can_create_service_from_services_module(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('business.store'), [
+                'name' => 'Fisio Nueva',
+                'industry' => 'Fisioterapia',
+                'email' => 'fisio@example.com',
+                'phone' => '3001234567',
+                'timezone' => 'America/Bogota',
+            ])
+            ->assertRedirect(route('onboarding.show', ['step' => 'negocio']));
+
+        $business = Business::where('name', 'Fisio Nueva')->firstOrFail();
+
+        $this->withSession(['business_id' => $business->id])
+            ->post(route('servicios.store'), [
+                'name' => 'Valoracion fisioterapeutica',
+                'duration_minutes' => 60,
+                'price' => 90000,
+                'description' => 'Primera valoracion del paciente.',
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('servicios.index'));
+
+        $this->assertDatabaseHas('services', [
+            'business_id' => $business->id,
+            'name' => 'Valoracion fisioterapeutica',
+            'price_cents' => 9000000,
+            'is_active' => true,
+        ]);
+    }
+
     public function test_dashboard_shows_operational_ok_state_when_there_are_no_pending_actions(): void
     {
         [$user, $business] = $this->tenantUser();

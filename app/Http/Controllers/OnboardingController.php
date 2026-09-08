@@ -6,6 +6,7 @@ use App\Models\BusinessSchedule;
 use App\Models\Professional;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class OnboardingController extends Controller
 {
@@ -65,7 +66,12 @@ class OnboardingController extends Controller
 
         if ($step === 'servicio') {
             $attributes = $request->validate([
-                'name' => ['required', 'string', 'max:140'],
+                'name' => [
+                    'required',
+                    'string',
+                    'max:140',
+                    Rule::unique('services')->where('business_id', $business->id),
+                ],
                 'duration_minutes' => ['required', 'integer', 'min:10', 'max:720'],
                 'price' => ['nullable', 'numeric', 'min:0'],
                 'description' => ['nullable', 'string', 'max:800'],
