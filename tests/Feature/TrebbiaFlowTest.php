@@ -2016,6 +2016,27 @@ class TrebbiaFlowTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_public_booking_link_opens_when_enabled_during_onboarding_trial(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $this->assertSame('onboarding', $business->status);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('settings.preferences.update'), [
+                'slot_interval_minutes' => 30,
+                'booking_notice_minutes' => 120,
+                'allow_public_booking' => 1,
+                'require_manual_confirmation' => 1,
+                'notify_email' => 0,
+                'notify_whatsapp' => 0,
+            ])->assertRedirect(route('settings.index'));
+
+        $this->get(route('public-booking.show', $business->slug))
+            ->assertOk()
+            ->assertSee('Selecciona tu cita');
+    }
+
     public function test_public_booking_page_shows_whatsapp_entry_point_when_enabled(): void
     {
         [, $business] = $this->tenantUser();

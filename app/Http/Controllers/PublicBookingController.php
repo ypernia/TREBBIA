@@ -173,8 +173,7 @@ class PublicBookingController extends Controller
         $settings = $business->settings()->firstOrCreate([]);
         $subscription = app(SubscriptionManager::class)->ensure($business);
 
-        return $business->status === 'active'
-            && $subscription->hasOperationalAccess()
+        return $subscription->hasOperationalAccess()
             && (bool) ($settings->public_booking_settings['allow_public_booking'] ?? false);
     }
 
