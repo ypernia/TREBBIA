@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/configuracion/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('settings.whatsapp.update');
         Route::post('/configuracion/sedes', [SettingsController::class, 'storeBranch'])->name('settings.branches.store');
         Route::put('/configuracion/sedes/{branch}', [SettingsController::class, 'updateBranch'])->name('settings.branches.update');
+        Route::delete('/configuracion/sedes/{branch}', [SettingsController::class, 'destroyBranch'])->name('settings.branches.destroy');
         Route::post('/configuracion/equipo/invitaciones', [TeamController::class, 'invite'])->name('team.invitations.store');
         Route::patch('/configuracion/equipo/miembros/{member}', [TeamController::class, 'updateMember'])->name('team.members.update');
         Route::patch('/configuracion/equipo/invitaciones/{invitation}/cancelar', [TeamController::class, 'cancelInvitation'])->name('team.invitations.cancel');

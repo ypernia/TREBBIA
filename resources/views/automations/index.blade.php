@@ -177,6 +177,19 @@
                             <span class="rounded-md px-2 py-1 text-xs font-bold {{ $template->is_active ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#53615d]' }}">{{ $template->is_active ? 'Activa' : 'Inactiva' }}</span>
                         </div>
                         <p class="mt-2 text-sm text-[#64716d]">{{ str($template->body)->limit(120) }}</p>
+                        <form method="POST" action="{{ route('automations.templates.update', $template) }}" class="mt-3">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="name" value="{{ $template->name }}">
+                            <input type="hidden" name="channel" value="{{ $template->channel }}">
+                            <input type="hidden" name="trigger" value="{{ $template->trigger }}">
+                            <input type="hidden" name="subject" value="{{ $template->subject }}">
+                            <input type="hidden" name="body" value="{{ $template->body }}">
+                            <input type="hidden" name="is_active" value="{{ $template->is_active ? 0 : 1 }}">
+                            <button class="rounded-md border border-[#d7ddd7] px-3 py-2 text-sm font-bold text-[#245f57] hover:bg-[#edf2ef]">
+                                {{ $template->is_active ? 'Inactivar' : 'Activar' }}
+                            </button>
+                        </form>
                     </div>
                 @endforeach
             </div>

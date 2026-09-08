@@ -285,36 +285,45 @@
                 </div>
 
                 @foreach ($branches as $branch)
-                    <form method="POST" action="{{ route('settings.branches.update', $branch) }}" class="grid gap-3 border-b border-[#e7ebe7] p-5 lg:grid-cols-[1fr_10rem_1fr_7rem_7rem_auto] lg:items-end">
-                        @csrf
-                        @method('PUT')
-                        <div>
-                            <label class="trebbia-label" for="branch_{{ $branch->id }}_name">Nombre</label>
-                            <input class="trebbia-input" id="branch_{{ $branch->id }}_name" name="name" value="{{ $branch->name }}" required>
-                        </div>
-                        <div>
-                            <label class="trebbia-label" for="branch_{{ $branch->id }}_phone">Telefono</label>
-                            <input class="trebbia-input" id="branch_{{ $branch->id }}_phone" name="phone" value="{{ $branch->phone }}">
-                        </div>
-                        <div>
-                            <label class="trebbia-label" for="branch_{{ $branch->id }}_address">Direccion</label>
-                            <input class="trebbia-input" id="branch_{{ $branch->id }}_address" name="address" value="{{ $branch->address }}">
-                        </div>
-                        <label class="flex items-center gap-2 pb-3 text-sm font-semibold text-[#53615d]">
-                            <input type="hidden" name="is_main" value="0">
-                            <input type="checkbox" name="is_main" value="1" @checked($branch->is_main)>
-                            Principal
-                        </label>
-                        <label class="flex items-center gap-2 pb-3 text-sm font-semibold text-[#53615d]">
-                            <input type="hidden" name="is_active" value="0">
-                            <input type="checkbox" name="is_active" value="1" @checked($branch->is_active)>
-                            Activa
-                        </label>
-                        <button class="trebbia-button trebbia-button-secondary">Actualizar</button>
-                    </form>
+                    <div class="grid gap-3 border-b border-[#e7ebe7] p-5 lg:grid-cols-[1fr_10rem_1fr_7rem_7rem_auto_auto] lg:items-end">
+                        <form id="branch_update_{{ $branch->id }}" method="POST" action="{{ route('settings.branches.update', $branch) }}" class="contents">
+                            @csrf
+                            @method('PUT')
+                            <div>
+                                <label class="trebbia-label" for="branch_{{ $branch->id }}_name">Nombre</label>
+                                <input class="trebbia-input" id="branch_{{ $branch->id }}_name" name="name" value="{{ $branch->name }}" required>
+                            </div>
+                            <div>
+                                <label class="trebbia-label" for="branch_{{ $branch->id }}_phone">Telefono</label>
+                                <input class="trebbia-input" id="branch_{{ $branch->id }}_phone" name="phone" value="{{ $branch->phone }}">
+                            </div>
+                            <div>
+                                <label class="trebbia-label" for="branch_{{ $branch->id }}_address">Direccion</label>
+                                <input class="trebbia-input" id="branch_{{ $branch->id }}_address" name="address" value="{{ $branch->address }}">
+                            </div>
+                            <label class="flex items-center gap-2 pb-3 text-sm font-semibold text-[#53615d]">
+                                <input type="hidden" name="is_main" value="0">
+                                <input type="checkbox" name="is_main" value="1" @checked($branch->is_main)>
+                                Principal
+                            </label>
+                            <label class="flex items-center gap-2 pb-3 text-sm font-semibold text-[#53615d]">
+                                <input type="hidden" name="is_active" value="0">
+                                <input type="checkbox" name="is_active" value="1" @checked($branch->is_active)>
+                                Activa
+                            </label>
+                            <button class="trebbia-button trebbia-button-secondary">Actualizar</button>
+                        </form>
+                        <form method="POST" action="{{ route('settings.branches.destroy', $branch) }}" onsubmit="return confirm('Archivar esta sede? Los profesionales y recursos quedaran sin sede asignada.');">
+                            @csrf
+                            @method('DELETE')
+                            <button class="trebbia-icon-button trebbia-icon-button-danger" title="Archivar sede" aria-label="Archivar sede {{ $branch->name }}" @disabled($branch->is_main)>
+                                <x-icon name="archive" class="size-4" />
+                            </button>
+                        </form>
+                    </div>
                 @endforeach
 
-                <form method="POST" action="{{ route('settings.branches.store') }}" class="grid gap-3 bg-[#f8faf8] p-5 lg:grid-cols-[1fr_10rem_1fr_7rem_7rem_auto] lg:items-end">
+                <form method="POST" action="{{ route('settings.branches.store') }}" class="grid gap-3 bg-[#f8faf8] p-5 lg:grid-cols-[1fr_10rem_1fr_7rem_7rem_auto_auto] lg:items-end">
                     @csrf
                     <div>
                         <label class="trebbia-label" for="new_branch_name">Nueva sede</label>

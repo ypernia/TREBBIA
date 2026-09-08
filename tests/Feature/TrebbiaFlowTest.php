@@ -899,6 +899,54 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_branch_can_be_archived_from_settings_without_losing_related_records(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $branch = $business->branches()->create([
+            'name' => 'Sede secundaria',
+            'phone' => '3020000000',
+            'address' => 'Calle 20',
+            'is_main' => false,
+            'is_active' => true,
+        ]);
+        $professional = $business->professionals()->create([
+            'branch_id' => $branch->id,
+            'name' => 'Dra. Sede',
+            'is_active' => true,
+        ]);
+        $resource = $business->resources()->create([
+            'branch_id' => $branch->id,
+            'name' => 'Consultorio 2',
+            'type' => 'Consultorio',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->delete(route('settings.branches.destroy', $branch))
+            ->assertRedirect(route('settings.index'));
+
+        $this->assertSoftDeleted('branches', ['id' => $branch->id]);
+        $this->assertNull($professional->fresh()->branch_id);
+        $this->assertNull($resource->fresh()->branch_id);
+    }
+
+    public function test_main_branch_cannot_be_archived_from_settings(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $branch = $business->branches()->where('is_main', true)->firstOrFail();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->delete(route('settings.branches.destroy', $branch))
+            ->assertSessionHasErrors('branch');
+
+        $this->assertDatabaseHas('branches', [
+            'id' => $branch->id,
+            'deleted_at' => null,
+        ]);
+    }
+
     public function test_settings_page_shows_users_and_business_summary(): void
     {
         [$user, $business] = $this->tenantUser();
@@ -1611,6 +1659,32 @@ class TrebbiaFlowTest extends TestCase
             'name' => 'Recordatorio de cita',
             'trigger' => 'appointment_reminder',
         ]);
+    }
+
+    public function test_automation_template_can_be_toggled_from_dashboard(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $template = $business->notificationTemplates()->create([
+            'name' => 'Recordatorio WhatsApp',
+            'channel' => 'whatsapp',
+            'trigger' => 'appointment_reminder',
+            'subject' => 'Recordatorio',
+            'body' => 'Hola {cliente}, recuerda tu cita.',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('automations.templates.update', $template), [
+                'name' => $template->name,
+                'channel' => $template->channel,
+                'trigger' => $template->trigger,
+                'subject' => $template->subject,
+                'body' => $template->body,
+                'is_active' => 0,
+            ])->assertRedirect(route('automations.index'));
+
+        $this->assertFalse($template->fresh()->is_active);
     }
 
     public function test_reminder_can_be_scheduled_and_marked_sent(): void

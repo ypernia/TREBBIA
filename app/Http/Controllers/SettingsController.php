@@ -199,10 +199,32 @@ class SettingsController extends Controller
     public function updateBranch(Request $request, Branch $branch): RedirectResponse
     {
         $this->authorizeBranch($branch);
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'branch.manage'), 403);
+
         $branch->update($this->validatedBranch($request));
         $this->syncMainBranch($branch, $request->boolean('is_main'));
 
         return redirect()->route('settings.index')->with('status', 'Sede actualizada.');
+    }
+
+    public function destroyBranch(Branch $branch): RedirectResponse
+    {
+        $this->authorizeBranch($branch);
+        abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'branch.manage'), 403);
+
+        if ($branch->is_main) {
+            return back()->withErrors(['branch' => 'No puedes archivar la sede principal. Primero marca otra sede como principal.']);
+        }
+
+        if ($branch->is_active && app('activeBusiness')->branches()->where('is_active', true)->count() <= 1) {
+            return back()->withErrors(['branch' => 'No puedes archivar la unica sede activa del negocio.']);
+        }
+
+        app('activeBusiness')->professionals()->where('branch_id', $branch->id)->update(['branch_id' => null]);
+        app('activeBusiness')->resources()->where('branch_id', $branch->id)->update(['branch_id' => null]);
+        $branch->delete();
+
+        return redirect()->route('settings.index')->with('status', 'Sede archivada.');
     }
 
     private function validatedBranch(Request $request): array
