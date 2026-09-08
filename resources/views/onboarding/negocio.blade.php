@@ -9,10 +9,7 @@
             <label class="trebbia-label" for="name">Nombre</label>
             <input class="trebbia-input" id="name" name="name" value="{{ old('name', $business->name) }}" required>
         </div>
-        <div>
-            <label class="trebbia-label" for="industry">Tipo</label>
-            <input class="trebbia-input" id="industry" name="industry" value="{{ old('industry', $business->industry) }}">
-        </div>
+        <x-industry-select :value="$business->industry" label="Tipo" />
         <div>
             <label class="trebbia-label" for="phone">Telefono</label>
             <input class="trebbia-input" id="phone" name="phone" value="{{ old('phone', $business->phone) }}">

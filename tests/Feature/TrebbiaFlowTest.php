@@ -139,6 +139,47 @@ class TrebbiaFlowTest extends TestCase
             ->assertRedirect(route('business.create'));
     }
 
+    public function test_business_creation_uses_industry_select_options(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('business.create'))
+            ->assertOk()
+            ->assertSee('Selecciona una opcion')
+            ->assertSee('Fisioterapia')
+            ->assertSee('Otro');
+
+        $this->post(route('business.store'), [
+            'name' => 'Centro Fisio',
+            'industry' => 'Fisioterapia',
+            'timezone' => 'America/Bogota',
+        ])->assertRedirect(route('onboarding.show', ['step' => 'negocio']));
+
+        $this->assertDatabaseHas('businesses', [
+            'name' => 'Centro Fisio',
+            'industry' => 'Fisioterapia',
+        ]);
+    }
+
+    public function test_business_creation_allows_other_industry_with_normalized_text(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('business.store'), [
+                'name' => 'Foto Studio',
+                'industry' => '__other',
+                'industry_other' => '  FOTOGRAFIA profesional  ',
+                'timezone' => 'America/Bogota',
+            ])->assertRedirect(route('onboarding.show', ['step' => 'negocio']));
+
+        $this->assertDatabaseHas('businesses', [
+            'name' => 'Foto Studio',
+            'industry' => 'Fotografia Profesional',
+        ]);
+    }
+
     public function test_onboarding_service_duplicate_returns_validation_instead_of_server_error(): void
     {
         [$user, $business] = $this->tenantUser();
@@ -982,6 +1023,7 @@ class TrebbiaFlowTest extends TestCase
         $service = $business->services()->create(['name' => 'Consulta', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
         $this->openWeekday($business, 1);
+        $date = CarbonImmutable::now()->next('monday')->toDateString();
 
         $this->actingAs($user)
             ->withSession(['business_id' => $business->id])
@@ -989,10 +1031,10 @@ class TrebbiaFlowTest extends TestCase
                 'client_id' => $client->id,
                 'service_id' => $service->id,
                 'professional_id' => $professional->id,
-                'date' => '2026-09-07',
+                'date' => $date,
                 'starts_at' => '09:00',
                 'status' => 'scheduled',
-            ])->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+            ])->assertRedirect(route('agenda.index', ['date' => $date]));
 
         $this->assertDatabaseHas('appointments', [
             'business_id' => $business->id,
@@ -2581,7 +2623,7 @@ class TrebbiaFlowTest extends TestCase
 
         $this->actingAs($user)->post(route('business.store'), [
             'name' => $businessName,
-            'industry' => 'Servicios',
+            'industry' => 'Servicios profesionales',
             'timezone' => 'America/Bogota',
         ]);
 

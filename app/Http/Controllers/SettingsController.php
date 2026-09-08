@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\WhatsAppAccount;
 use App\Services\PlanEntitlements;
+use App\Support\BusinessIndustries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -51,12 +52,14 @@ class SettingsController extends Controller
     {
         $attributes = $request->validate([
             'name' => ['required', 'string', 'max:160'],
-            'industry' => ['nullable', 'string', 'max:120'],
+            ...BusinessIndustries::validationRules(),
             'email' => ['nullable', 'email', 'max:180'],
             'phone' => ['required_if:enabled,1', 'nullable', 'string', 'max:60'],
             'timezone' => ['required', Rule::in(array_keys($this->timezones()))],
             'currency' => ['required', Rule::in(array_keys($this->currencies()))],
         ]);
+        unset($attributes['industry_other']);
+        $attributes['industry'] = BusinessIndustries::resolveFromRequest($request);
 
         if ($request->boolean('allow_public_booking')) {
             abort_unless(app(PlanEntitlements::class)->can(app('activeBusiness'), 'public_booking.enabled'), 403);

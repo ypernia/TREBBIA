@@ -48,6 +48,7 @@ return [
         'phone' => 'El telefono',
         'timezone' => 'La zona horaria',
         'industry' => 'La industria',
+        'industry_other' => 'El tipo de negocio',
         'duration_minutes' => 'La duracion',
         'price' => 'El precio',
         'description' => 'La descripcion',

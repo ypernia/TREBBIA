@@ -56,10 +56,7 @@
                         <label class="trebbia-label" for="name">Nombre</label>
                         <input class="trebbia-input" id="name" name="name" value="{{ old('name', $business->name) }}" required>
                     </div>
-                    <div>
-                        <label class="trebbia-label" for="industry">Industria</label>
-                        <input class="trebbia-input" id="industry" name="industry" value="{{ old('industry', $business->industry) }}">
-                    </div>
+                    <x-industry-select :value="$business->industry" label="Industria" />
                     <div>
                         <label class="trebbia-label" for="email">Correo</label>
                         <input class="trebbia-input" id="email" type="email" name="email" value="{{ old('email', $business->email) }}">

@@ -16,10 +16,7 @@
                         <label class="trebbia-label" for="name">Nombre del negocio</label>
                         <input class="trebbia-input" id="name" name="name" value="{{ old('name') }}" required autofocus>
                     </div>
-                    <div>
-                        <label class="trebbia-label" for="industry">Tipo de negocio</label>
-                        <input class="trebbia-input" id="industry" name="industry" value="{{ old('industry') }}" placeholder="Fisioterapia, belleza, salud...">
-                    </div>
+                    <x-industry-select :value="old('industry')" />
                     <div>
                         <label class="trebbia-label" for="timezone">Zona horaria</label>
                         <select class="trebbia-input" id="timezone" name="timezone">

@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\BusinessSettings;
 use App\Models\BusinessUser;
 use App\Services\SubscriptionManager;
+use App\Support\BusinessIndustries;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -21,11 +22,13 @@ class BusinessSetupController extends Controller
     {
         $attributes = $request->validate([
             'name' => ['required', 'string', 'max:160'],
-            'industry' => ['nullable', 'string', 'max:120'],
+            ...BusinessIndustries::validationRules(),
             'email' => ['nullable', 'email', 'max:180'],
             'phone' => ['nullable', 'string', 'max:60'],
             'timezone' => ['required', 'string', 'max:80'],
         ]);
+        unset($attributes['industry_other']);
+        $attributes['industry'] = BusinessIndustries::resolveFromRequest($request);
 
         $business = Business::create([
             ...$attributes,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BusinessSchedule;
 use App\Models\Professional;
 use App\Models\Service;
+use App\Support\BusinessIndustries;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -30,12 +31,16 @@ class OnboardingController extends Controller
         $step = $this->normalizeStep($step);
 
         if ($step === 'negocio') {
-            $business->update($request->validate([
+            $attributes = $request->validate([
                 'name' => ['required', 'string', 'max:160'],
-                'industry' => ['nullable', 'string', 'max:120'],
+                ...BusinessIndustries::validationRules(),
                 'email' => ['nullable', 'email', 'max:180'],
                 'phone' => ['nullable', 'string', 'max:60'],
-            ]));
+            ]);
+            unset($attributes['industry_other']);
+            $attributes['industry'] = BusinessIndustries::resolveFromRequest($request);
+
+            $business->update($attributes);
 
             return redirect()->route('onboarding.show', ['step' => 'horarios']);
         }
