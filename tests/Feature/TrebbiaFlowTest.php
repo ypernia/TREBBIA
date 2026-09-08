@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\PublicBookingReceived;
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
 use App\Models\AppointmentSlotLock;
@@ -28,6 +29,7 @@ use App\Services\ConversationManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -2253,6 +2255,10 @@ class TrebbiaFlowTest extends TestCase
                 'allow_public_booking' => true,
                 'require_manual_confirmation' => true,
             ],
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
         ]);
         $service = $business->services()->create(['name' => 'Consulta publica', 'duration_minutes' => 60, 'price_cents' => 12000000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Dra. Publica', 'is_active' => true]);
@@ -2271,6 +2277,8 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('professionalOptionsByService', false)
             ->assertSee('09:00');
 
+        Mail::fake();
+
         $this->post(route('public-booking.store', $business->slug), [
             'service_id' => $service->id,
             'professional_id' => $professional->id,
@@ -2281,6 +2289,12 @@ class TrebbiaFlowTest extends TestCase
             'client_phone' => '3004445566',
             'notes' => 'Primera reserva desde la web.',
         ])->assertRedirect();
+
+        Mail::assertSent(PublicBookingReceived::class, function (PublicBookingReceived $mail): bool {
+            return $mail->requiresManualConfirmation
+                && $mail->hasTo('owner@example.com')
+                && $mail->reservation instanceof BookingRequest;
+        });
 
         $this->assertDatabaseHas('clients', [
             'business_id' => $business->id,
@@ -2313,10 +2327,16 @@ class TrebbiaFlowTest extends TestCase
                 'allow_public_booking' => true,
                 'require_manual_confirmation' => false,
             ],
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
         ]);
         $service = $business->services()->create(['name' => 'Consulta automatica', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Dr. Automatico', 'is_active' => true]);
         $this->openWeekday($business, 1);
+
+        Mail::fake();
 
         $this->post(route('public-booking.store', $business->slug), [
             'service_id' => $service->id,
@@ -2326,6 +2346,12 @@ class TrebbiaFlowTest extends TestCase
             'client_name' => 'Cliente Confirmado',
             'client_email' => 'confirmado@example.com',
         ])->assertRedirect();
+
+        Mail::assertSent(PublicBookingReceived::class, function (PublicBookingReceived $mail): bool {
+            return ! $mail->requiresManualConfirmation
+                && $mail->hasTo('owner@example.com')
+                && $mail->reservation instanceof Appointment;
+        });
 
         $this->assertDatabaseHas('appointments', [
             'business_id' => $business->id,

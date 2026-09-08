@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\BookingRequest;
 use App\Models\Business;
 use App\Services\BookingEngine;
+use App\Services\PublicBookingNotifier;
 use App\Services\SubscriptionManager;
 use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
@@ -17,7 +18,10 @@ use Illuminate\View\View;
 
 class PublicBookingController extends Controller
 {
-    public function __construct(private BookingEngine $booking) {}
+    public function __construct(
+        private BookingEngine $booking,
+        private PublicBookingNotifier $notifier,
+    ) {}
 
     public function show(Request $request, Business $business): View
     {
@@ -96,6 +100,8 @@ class PublicBookingController extends Controller
                     'notes' => $attributes['notes'] ?? null,
                 ]);
 
+                $this->notifier->notify($business, $bookingRequest, true);
+
                 return redirect()->route('public-booking.request-confirmation', [$business->slug, 'bookingRequest' => $bookingRequest->id]);
             }
 
@@ -113,6 +119,8 @@ class PublicBookingController extends Controller
                 ],
                 'notes' => $attributes['notes'] ?? null,
             ]);
+
+            $this->notifier->notify($business, $appointment, false);
         } catch (ValidationException) {
             $alternatives = $this->booking->alternativeSlots(
                 $business,
