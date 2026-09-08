@@ -7,7 +7,7 @@
 @section('content')
     @php
         $selectedDate = old('date', request('date', $appointment->exists ? $appointment->starts_at->format('Y-m-d') : today()->format('Y-m-d')));
-        $selectedTime = old('starts_at', request('starts_at', $appointment->exists ? $appointment->starts_at->format('H:i') : '09:00'));
+        $selectedTime = substr((string) old('starts_at', request('starts_at', $appointment->exists ? $appointment->starts_at->format('H:i') : '09:00')), 0, 5);
         $selectedClient = old('client_id', request('client_id', $appointment->client_id));
         $selectedService = old('service_id', request('service_id', $appointment->service_id));
         $selectedProfessional = old('professional_id', request('professional_id', $appointment->professional_id));

@@ -7,6 +7,7 @@ use App\Models\BookingRequest;
 use App\Models\Service;
 use App\Services\AppointmentAvailabilityService;
 use App\Services\BookingEngine;
+use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -181,13 +182,23 @@ class AppointmentController extends Controller
             'resource_id' => ['nullable', Rule::exists('resources', 'id')->where('business_id', $business->id)],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('business_id', $business->id)],
             'date' => ['required', 'date'],
-            'starts_at' => ['required', 'date_format:H:i'],
+            'starts_at' => ['required', TimeInput::VALIDATION_RULE],
             'status' => ['required', Rule::in(['scheduled', 'confirmed', 'cancelled', 'completed'])],
             'notes' => ['nullable', 'string', 'max:1200'],
+        ], [
+            'starts_at.required' => 'Indica la hora inicial de la cita.',
+            'starts_at.date_format' => 'La hora inicial debe ser valida, por ejemplo 09:00.',
+        ], [
+            'starts_at' => 'hora inicial',
+            'date' => 'fecha',
+            'professional_id' => 'profesional',
+            'service_id' => 'servicio',
+            'resource_id' => 'recurso',
+            'branch_id' => 'sede',
         ]);
 
         $service = Service::where('business_id', $business->id)->findOrFail($attributes['service_id']);
-        $startsAt = CarbonImmutable::parse($attributes['date'].' '.$attributes['starts_at'], $business->timezone);
+        $startsAt = CarbonImmutable::parse($attributes['date'].' '.TimeInput::normalize($attributes['starts_at']), $business->timezone);
         $endsAt = $startsAt->copy()->addMinutes($service->duration_minutes);
 
         $errors = $this->availability->validate(

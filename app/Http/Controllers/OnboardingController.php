@@ -6,6 +6,7 @@ use App\Models\BusinessSchedule;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Support\BusinessIndustries;
+use App\Support\TimeInput;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -47,10 +48,20 @@ class OnboardingController extends Controller
 
         if ($step === 'horarios') {
             $attributes = $request->validate([
-                'opens_at' => ['required', 'date_format:H:i'],
-                'closes_at' => ['required', 'date_format:H:i', 'after:opens_at'],
+                'opens_at' => ['required', TimeInput::VALIDATION_RULE],
+                'closes_at' => ['required', TimeInput::VALIDATION_RULE, 'after:opens_at'],
                 'weekdays' => ['array'],
                 'weekdays.*' => ['integer', 'between:1,7'],
+            ], [
+                'opens_at.required' => 'Indica la hora de apertura.',
+                'opens_at.date_format' => 'La hora de apertura debe ser valida, por ejemplo 08:00.',
+                'closes_at.required' => 'Indica la hora de cierre.',
+                'closes_at.date_format' => 'La hora de cierre debe ser valida, por ejemplo 18:00.',
+                'closes_at.after' => 'La hora de cierre debe ser posterior a la hora de apertura.',
+            ], [
+                'opens_at' => 'hora de apertura',
+                'closes_at' => 'hora de cierre',
+                'weekdays' => 'dias laborales',
             ]);
 
             $selected = collect($attributes['weekdays'] ?? []);
@@ -59,8 +70,8 @@ class OnboardingController extends Controller
                 BusinessSchedule::updateOrCreate(
                     ['business_id' => $business->id, 'branch_id' => null, 'weekday' => $weekday],
                     [
-                        'opens_at' => $attributes['opens_at'],
-                        'closes_at' => $attributes['closes_at'],
+                        'opens_at' => TimeInput::normalize($attributes['opens_at']),
+                        'closes_at' => TimeInput::normalize($attributes['closes_at']),
                         'is_closed' => ! $selected->contains($weekday),
                     ],
                 );

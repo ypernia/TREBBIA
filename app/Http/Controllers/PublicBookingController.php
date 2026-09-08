@@ -7,6 +7,7 @@ use App\Models\BookingRequest;
 use App\Models\Business;
 use App\Services\BookingEngine;
 use App\Services\SubscriptionManager;
+use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,14 +54,27 @@ class PublicBookingController extends Controller
             'service_id' => ['required', Rule::exists('services', 'id')->where('business_id', $business->id)->where('is_active', true)],
             'professional_id' => ['required', Rule::exists('professionals', 'id')->where('business_id', $business->id)->where('is_active', true)],
             'date' => ['required', 'date'],
-            'starts_at' => ['required', 'date_format:H:i'],
+            'starts_at' => ['required', TimeInput::VALIDATION_RULE],
             'client_name' => ['required', 'string', 'max:140'],
             'client_email' => ['nullable', 'email', 'max:180'],
             'client_phone' => ['nullable', 'string', 'max:60'],
             'notes' => ['nullable', 'string', 'max:800'],
+        ], [
+            'starts_at.required' => 'Selecciona un horario disponible.',
+            'starts_at.date_format' => 'El horario seleccionado debe ser valido, por ejemplo 09:00.',
+            'client_name.required' => 'Indica tu nombre para reservar.',
+        ], [
+            'starts_at' => 'horario',
+            'client_name' => 'nombre',
+            'client_email' => 'correo',
+            'client_phone' => 'telefono',
+            'service_id' => 'servicio',
+            'professional_id' => 'profesional',
+            'date' => 'fecha',
         ]);
 
         $service = $business->services()->where('is_active', true)->findOrFail($attributes['service_id']);
+        $attributes['starts_at'] = TimeInput::normalize($attributes['starts_at']);
         $startsAt = CarbonImmutable::parse($attributes['date'].' '.$attributes['starts_at'], $business->timezone);
         $client = $this->booking->findOrCreateClient($business, $attributes);
         $settings = $business->settings()->firstOrCreate([]);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessSchedule;
+use App\Support\TimeInput;
 use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
@@ -23,8 +24,8 @@ class ScheduleController extends Controller
     {
         $attributes = $request->validate([
             'schedule' => ['required', 'array'],
-            'schedule.*.opens_at' => ['nullable', 'date_format:H:i,H:i:s'],
-            'schedule.*.closes_at' => ['nullable', 'date_format:H:i,H:i:s'],
+            'schedule.*.opens_at' => ['nullable', TimeInput::VALIDATION_RULE],
+            'schedule.*.closes_at' => ['nullable', TimeInput::VALIDATION_RULE],
             'schedule.*.is_closed' => ['nullable', 'boolean'],
         ], $this->scheduleMessages(), $this->scheduleAttributes());
 
@@ -35,15 +36,15 @@ class ScheduleController extends Controller
             $isClosed = (bool) ($row['is_closed'] ?? false);
 
             $request->validate([
-                "schedule.{$weekday}.closes_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i,H:i:s', "after:schedule.{$weekday}.opens_at"],
-                "schedule.{$weekday}.opens_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i,H:i:s'],
+                "schedule.{$weekday}.closes_at" => [$isClosed ? 'nullable' : 'required', TimeInput::VALIDATION_RULE, "after:schedule.{$weekday}.opens_at"],
+                "schedule.{$weekday}.opens_at" => [$isClosed ? 'nullable' : 'required', TimeInput::VALIDATION_RULE],
             ], $this->scheduleMessages(), $this->scheduleAttributes());
 
             BusinessSchedule::updateOrCreate(
                 ['business_id' => $business->id, 'branch_id' => null, 'weekday' => $weekday],
                 [
-                    'opens_at' => $isClosed ? null : $this->normalizeTime($row['opens_at']),
-                    'closes_at' => $isClosed ? null : $this->normalizeTime($row['closes_at']),
+                    'opens_at' => $isClosed ? null : TimeInput::normalize($row['opens_at']),
+                    'closes_at' => $isClosed ? null : TimeInput::normalize($row['closes_at']),
                     'is_closed' => $isClosed,
                 ],
             );
@@ -89,8 +90,4 @@ class ScheduleController extends Controller
         ];
     }
 
-    private function normalizeTime(?string $time): ?string
-    {
-        return $time ? substr($time, 0, 5) : null;
-    }
 }

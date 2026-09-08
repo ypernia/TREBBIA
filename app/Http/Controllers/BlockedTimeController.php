@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\BlockedTime;
 use App\Services\BookingEngine;
+use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -34,8 +35,8 @@ class BlockedTimeController extends Controller
                 'professional_id' => $request->input('professional_id'),
                 'resource_id' => $request->input('resource_id'),
                 'date' => $request->input('date', now($business->timezone)->toDateString()),
-                'starts_at' => $request->input('starts_at', '08:00'),
-                'ends_at' => $request->input('ends_at', '18:00'),
+                'starts_at' => TimeInput::normalize($request->input('starts_at', '08:00')),
+                'ends_at' => TimeInput::normalize($request->input('ends_at', '18:00')),
                 'reason' => $request->input('reason', 'Otro'),
             ],
         ]);
@@ -103,9 +104,22 @@ class BlockedTimeController extends Controller
             'professional_id' => ['nullable', Rule::exists('professionals', 'id')->where('business_id', $business->id)->where('is_active', true)],
             'resource_id' => ['nullable', Rule::exists('resources', 'id')->where('business_id', $business->id)->where('is_active', true)],
             'date' => ['required', 'date'],
-            'starts_at' => ['required', 'date_format:H:i'],
-            'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
+            'starts_at' => ['required', TimeInput::VALIDATION_RULE],
+            'ends_at' => ['required', TimeInput::VALIDATION_RULE, 'after:starts_at'],
             'reason' => ['required', 'string', 'max:160'],
+        ], [
+            'starts_at.required' => 'Indica la hora inicial del bloqueo.',
+            'starts_at.date_format' => 'La hora inicial debe ser valida, por ejemplo 08:00.',
+            'ends_at.required' => 'Indica la hora final del bloqueo.',
+            'ends_at.date_format' => 'La hora final debe ser valida, por ejemplo 18:00.',
+            'ends_at.after' => 'La hora final debe ser posterior a la hora inicial.',
+        ], [
+            'starts_at' => 'hora inicial',
+            'ends_at' => 'hora final',
+            'professional_id' => 'profesional',
+            'resource_id' => 'recurso',
+            'scope' => 'tipo de bloqueo',
+            'reason' => 'motivo',
         ]);
 
         if ($attributes['scope'] === 'professional') {
@@ -138,12 +152,12 @@ class BlockedTimeController extends Controller
 
     private function startsAt(array $attributes): CarbonImmutable
     {
-        return CarbonImmutable::parse($attributes['date'].' '.$attributes['starts_at'], app('activeBusiness')->timezone);
+        return CarbonImmutable::parse($attributes['date'].' '.TimeInput::normalize($attributes['starts_at']), app('activeBusiness')->timezone);
     }
 
     private function endsAt(array $attributes): CarbonImmutable
     {
-        return CarbonImmutable::parse($attributes['date'].' '.$attributes['ends_at'], app('activeBusiness')->timezone);
+        return CarbonImmutable::parse($attributes['date'].' '.TimeInput::normalize($attributes['ends_at']), app('activeBusiness')->timezone);
     }
 
     private function scopeOptions(): array

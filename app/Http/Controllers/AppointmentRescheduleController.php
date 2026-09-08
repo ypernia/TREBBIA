@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Services\BookingEngine;
+use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,12 +19,18 @@ class AppointmentRescheduleController extends Controller
 
         $attributes = $request->validate([
             'date' => ['required', 'date'],
-            'starts_at' => ['required', 'date_format:H:i'],
+            'starts_at' => ['required', TimeInput::VALIDATION_RULE],
             'return_to' => ['nullable', 'url'],
+        ], [
+            'starts_at.required' => 'Indica la nueva hora de la cita.',
+            'starts_at.date_format' => 'La nueva hora debe ser valida, por ejemplo 09:00.',
+        ], [
+            'starts_at' => 'nueva hora',
+            'date' => 'fecha',
         ]);
 
         $business = app('activeBusiness');
-        $startsAt = CarbonImmutable::parse($attributes['date'].' '.$attributes['starts_at'], $business->timezone);
+        $startsAt = CarbonImmutable::parse($attributes['date'].' '.TimeInput::normalize($attributes['starts_at']), $business->timezone);
         $errors = $booking->validateSlot(
             $business,
             $appointment->service,

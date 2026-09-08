@@ -796,6 +796,51 @@ class TrebbiaFlowTest extends TestCase
         $this->assertStringNotContainsString('formato H:i', $message);
     }
 
+    public function test_onboarding_schedule_accepts_mobile_time_values(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('onboarding.store', 'horarios'), [
+                'opens_at' => '08:00:00',
+                'closes_at' => '18:00:00',
+                'weekdays' => [1, 2, 3, 4, 5],
+            ])->assertRedirect(route('onboarding.show', ['step' => 'servicio']));
+
+        $this->assertDatabaseHas('business_schedules', [
+            'business_id' => $business->id,
+            'weekday' => 1,
+            'opens_at' => '08:00',
+            'closes_at' => '18:00',
+            'is_closed' => false,
+        ]);
+    }
+
+    public function test_onboarding_schedule_validation_message_is_readable(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $response = $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('onboarding.show', ['step' => 'horarios']))
+            ->post(route('onboarding.store', 'horarios'), [
+                'opens_at' => 'bad',
+                'closes_at' => '18:00',
+                'weekdays' => [1, 2, 3, 4, 5],
+            ]);
+
+        $response->assertRedirect(route('onboarding.show', ['step' => 'horarios']))
+            ->assertSessionHasErrors('opens_at');
+
+        $message = session('errors')->first('opens_at');
+
+        $this->assertStringContainsString('hora de apertura', $message);
+        $this->assertStringContainsString('08:00', $message);
+        $this->assertStringNotContainsString('opens_at', $message);
+        $this->assertStringNotContainsString('formato H:i', $message);
+    }
+
     public function test_business_settings_profile_preferences_and_branches_can_be_updated(): void
     {
         [$user, $business] = $this->tenantUser();
@@ -1063,7 +1108,7 @@ class TrebbiaFlowTest extends TestCase
                 'service_id' => $service->id,
                 'professional_id' => $professional->id,
                 'date' => $date,
-                'starts_at' => '09:00',
+                'starts_at' => '09:00:00',
                 'status' => 'scheduled',
             ])->assertRedirect(route('agenda.index', ['date' => $date]));
 
@@ -1124,8 +1169,8 @@ class TrebbiaFlowTest extends TestCase
                 'scope' => 'professional',
                 'professional_id' => $professional->id,
                 'date' => now($business->timezone)->addDay()->toDateString(),
-                'starts_at' => '13:00',
-                'ends_at' => '15:00',
+                'starts_at' => '13:00:00',
+                'ends_at' => '15:00:00',
                 'reason' => 'Incapacidad',
                 'confirm_impact' => 1,
             ])
@@ -1183,7 +1228,7 @@ class TrebbiaFlowTest extends TestCase
             ->withSession(['business_id' => $business->id])
             ->patch(route('agenda.reschedule', $appointment), [
                 'date' => '2026-09-07',
-                'starts_at' => '10:00',
+                'starts_at' => '10:00:00',
                 'return_to' => route('blocked-times.show', $blockedTime),
             ])
             ->assertRedirect(route('blocked-times.show', $blockedTime));
@@ -2105,7 +2150,7 @@ class TrebbiaFlowTest extends TestCase
             'service_id' => $service->id,
             'professional_id' => $professional->id,
             'date' => '2026-09-07',
-            'starts_at' => '09:00',
+            'starts_at' => '09:00:00',
             'client_name' => 'Cliente Web',
             'client_email' => 'clienteweb@example.com',
             'client_phone' => '3004445566',

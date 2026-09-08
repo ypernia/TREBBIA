@@ -1,6 +1,10 @@
 @extends('layouts.onboarding')
 
 @section('onboarding-content')
+    @php
+        $opensAt = substr((string) old('opens_at', '08:00'), 0, 5);
+        $closesAt = substr((string) old('closes_at', '18:00'), 0, 5);
+    @endphp
     <h1 class="text-2xl font-bold">Horarios</h1>
     <p class="mt-2 text-[#64716d]">Define un horario general inicial. Luego podremos llevarlo por sede y profesional.</p>
     <form method="POST" action="{{ route('onboarding.store', 'horarios') }}" class="mt-6 space-y-5">
@@ -8,11 +12,11 @@
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <label class="trebbia-label" for="opens_at">Abre</label>
-                <input class="trebbia-input" id="opens_at" type="time" name="opens_at" value="{{ old('opens_at', '08:00') }}" required>
+                <input class="trebbia-input" id="opens_at" type="time" name="opens_at" value="{{ $opensAt }}" required>
             </div>
             <div>
                 <label class="trebbia-label" for="closes_at">Cierra</label>
-                <input class="trebbia-input" id="closes_at" type="time" name="closes_at" value="{{ old('closes_at', '18:00') }}" required>
+                <input class="trebbia-input" id="closes_at" type="time" name="closes_at" value="{{ $closesAt }}" required>
             </div>
         </div>
         <div>
