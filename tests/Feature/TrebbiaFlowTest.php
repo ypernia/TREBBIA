@@ -107,6 +107,29 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('Compartir reservas');
     }
 
+    public function test_registration_validation_messages_are_human_readable_in_spanish(): void
+    {
+        $this->app->setLocale('es');
+
+        $response = $this
+            ->from(route('register'))
+            ->post(route('register.store'), [
+                'name' => 'Yilmar',
+                'email' => 'isabellapp.yp@gmail.com',
+                'password' => '123',
+                'password_confirmation' => '123',
+            ]);
+
+        $response
+            ->assertRedirect(route('register'))
+            ->assertSessionHasErrors('password');
+
+        $message = session('errors')->first('password');
+
+        $this->assertSame('La contrasena debe tener al menos 8 caracteres.', $message);
+        $this->assertStringNotContainsString('validation.', $message);
+    }
+
     public function test_authenticated_user_without_business_is_redirected_to_business_creation(): void
     {
         $user = User::factory()->create();
