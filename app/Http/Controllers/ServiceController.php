@@ -70,17 +70,30 @@ class ServiceController extends Controller
                 continue;
             }
 
-            if ($business->services()->where('name', $service['name'])->exists()) {
+            $existingService = $business->services()
+                ->withTrashed()
+                ->where('name', $service['name'])
+                ->first();
+
+            if ($existingService && ! $existingService->trashed()) {
                 continue;
             }
 
-            $business->services()->create([
+            $payload = [
                 'name' => $service['name'],
                 'duration_minutes' => $service['duration_minutes'],
                 'price_cents' => (int) round(($service['price'] ?? 0) * 100),
                 'description' => $service['description'] ?? null,
                 'is_active' => true,
-            ]);
+            ];
+
+            if ($existingService?->trashed()) {
+                $existingService->restore();
+                $existingService->update($payload);
+            } else {
+                $business->services()->create($payload);
+            }
+
             $created++;
         }
 

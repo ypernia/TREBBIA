@@ -461,6 +461,45 @@ class TrebbiaFlowTest extends TestCase
         $this->assertSame(1, Service::where('business_id', $business->id)->where('name', 'Corte clasico')->count());
     }
 
+    public function test_service_suggestion_bulk_creation_restores_archived_names(): void
+    {
+        [$user, $business] = $this->tenantUser('Fisio Archivada', 'archivada@example.com');
+        $business->update(['industry' => 'Fisioterapia']);
+        $service = $business->services()->create([
+            'name' => 'Valoracion inicial',
+            'duration_minutes' => 45,
+            'price_cents' => 7000000,
+            'description' => 'Servicio anterior.',
+            'is_active' => false,
+        ]);
+        $service->delete();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('servicios.suggestions.store'), [
+                'services' => [
+                    [
+                        'name' => 'Valoracion inicial',
+                        'duration_minutes' => 60,
+                        'price' => 90000,
+                        'description' => 'Evaluacion inicial.',
+                        'selected' => 1,
+                    ],
+                ],
+            ])->assertRedirect(route('servicios.index'));
+
+        $this->assertDatabaseHas('services', [
+            'business_id' => $business->id,
+            'name' => 'Valoracion inicial',
+            'duration_minutes' => 60,
+            'price_cents' => 9000000,
+            'description' => 'Evaluacion inicial.',
+            'is_active' => true,
+            'deleted_at' => null,
+        ]);
+        $this->assertSame(1, Service::withTrashed()->where('business_id', $business->id)->where('name', 'Valoracion inicial')->count());
+    }
+
     public function test_client_profile_shows_contact_status_and_appointment_history(): void
     {
         [$user, $business] = $this->tenantUser();

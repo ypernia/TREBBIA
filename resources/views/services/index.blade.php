@@ -22,7 +22,11 @@
                 @csrf
                 <div class="grid gap-3 lg:grid-cols-2">
                     @foreach ($suggestedServices as $index => $service)
-                        @php $exists = $business->services()->where('name', $service['name'])->exists(); @endphp
+                        @php
+                            $existingService = $business->services()->withTrashed()->where('name', $service['name'])->first();
+                            $exists = $existingService && ! $existingService->trashed();
+                            $isArchived = $existingService?->trashed();
+                        @endphp
                         <label class="rounded-md border border-[#e1e6e0] bg-white p-4 {{ $exists ? 'opacity-60' : '' }}">
                             <span class="flex items-start gap-3">
                                 <input type="hidden" name="services[{{ $index }}][name]" value="{{ $service['name'] }}">
@@ -33,7 +37,15 @@
                                 <span>
                                     <span class="block font-bold">{{ $service['name'] }}</span>
                                     <span class="mt-1 block text-sm text-[#64716d]">{{ $service['duration_minutes'] }} min · ${{ number_format($service['price'], 0, ',', '.') }}</span>
-                                    <span class="mt-1 block text-sm text-[#64716d]">{{ $exists ? 'Ya existe en tu catalogo.' : $service['description'] }}</span>
+                                    <span class="mt-1 block text-sm text-[#64716d]">
+                                        @if ($exists)
+                                            Ya existe en tu catalogo.
+                                        @elseif ($isArchived)
+                                            Estaba archivado. Se reactivara en tu catalogo.
+                                        @else
+                                            {{ $service['description'] }}
+                                        @endif
+                                    </span>
                                 </span>
                             </span>
                         </label>
