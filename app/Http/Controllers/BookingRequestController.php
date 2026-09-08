@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BookingRequest;
+use App\Services\AppointmentNotificationService;
 use App\Services\BookingEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class BookingRequestController extends Controller
 {
-    public function accept(Request $request, BookingRequest $bookingRequest, BookingEngine $booking): RedirectResponse
+    public function accept(Request $request, BookingRequest $bookingRequest, BookingEngine $booking, AppointmentNotificationService $notifications): RedirectResponse
     {
         $this->authorizeTenant($bookingRequest);
 
@@ -41,12 +42,14 @@ class BookingRequestController extends Controller
                 ->with('booking_request_id', $bookingRequest->id);
         }
 
+        $notifications->appointmentConfirmed($appointment);
+
         return redirect()
             ->route('agenda.index', ['date' => $appointment->starts_at->toDateString()])
             ->with('status', 'Solicitud aceptada y cita confirmada.');
     }
 
-    public function reject(Request $request, BookingRequest $bookingRequest, BookingEngine $booking): RedirectResponse
+    public function reject(Request $request, BookingRequest $bookingRequest, BookingEngine $booking, AppointmentNotificationService $notifications): RedirectResponse
     {
         $this->authorizeTenant($bookingRequest);
 
@@ -54,11 +57,13 @@ class BookingRequestController extends Controller
             'decision_notes' => ['nullable', 'string', 'max:800'],
         ]);
 
-        $booking->rejectBookingRequest(
+        $rejectedRequest = $booking->rejectBookingRequest(
             $bookingRequest,
             $request->user()->id,
             $attributes['decision_notes'] ?? null,
         );
+
+        $notifications->bookingRejected($rejectedRequest);
 
         return back()->with('status', 'Solicitud rechazada.');
     }

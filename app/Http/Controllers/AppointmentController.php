@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\BookingRequest;
 use App\Models\Service;
 use App\Services\AppointmentAvailabilityService;
+use App\Services\AppointmentNotificationService;
 use App\Services\BookingEngine;
 use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
@@ -21,6 +22,7 @@ class AppointmentController extends Controller
     public function __construct(
         private AppointmentAvailabilityService $availability,
         private BookingEngine $booking,
+        private AppointmentNotificationService $notifications,
     ) {}
 
     public function index(Request $request): View
@@ -120,7 +122,11 @@ class AppointmentController extends Controller
     {
         $attributes = $this->validated($request);
 
-        $this->booking->createAppointment(app('activeBusiness'), $attributes);
+        $appointment = $this->booking->createAppointment(app('activeBusiness'), $attributes);
+
+        if ($appointment->status === Appointment::STATUS_CONFIRMED) {
+            $this->notifications->appointmentConfirmed($appointment);
+        }
 
         return redirect()->route('agenda.index', ['date' => $attributes['starts_at']->toDateString()])
             ->with('status', 'Cita creada.');
@@ -137,7 +143,26 @@ class AppointmentController extends Controller
     {
         $this->authorizeTenant($appointment);
         $attributes = $this->validated($request, $appointment);
+        $previousStatus = $appointment->status;
+        $previousSchedule = [
+            'starts_at' => CarbonImmutable::parse($appointment->starts_at, app('activeBusiness')->timezone),
+            'ends_at' => CarbonImmutable::parse($appointment->ends_at, app('activeBusiness')->timezone),
+        ];
         $appointment->update($attributes);
+        $scheduleChanged = ! $previousSchedule['starts_at']->equalTo($appointment->starts_at)
+            || ! $previousSchedule['ends_at']->equalTo($appointment->ends_at);
+
+        if ($appointment->status === Appointment::STATUS_CONFIRMED && $previousStatus !== Appointment::STATUS_CONFIRMED) {
+            $this->notifications->appointmentConfirmed($appointment);
+        }
+
+        if ($appointment->status === Appointment::STATUS_CANCELLED && $previousStatus !== Appointment::STATUS_CANCELLED) {
+            $this->notifications->appointmentCancelled($appointment);
+        }
+
+        if ($scheduleChanged && $appointment->status !== Appointment::STATUS_CANCELLED) {
+            $this->notifications->appointmentRescheduled($appointment, $previousSchedule);
+        }
 
         return redirect()->route('agenda.index', ['date' => $attributes['starts_at']->toDateString()])
             ->with('status', 'Cita actualizada.');
@@ -146,6 +171,7 @@ class AppointmentController extends Controller
     public function destroy(Appointment $appointment): RedirectResponse
     {
         $this->authorizeTenant($appointment);
+        $this->notifications->appointmentCancelled($appointment);
         $appointment->delete();
 
         return redirect()->route('agenda.index')->with('status', 'Cita archivada.');

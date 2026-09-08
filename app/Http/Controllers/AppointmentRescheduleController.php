@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Services\AppointmentNotificationService;
 use App\Services\BookingEngine;
 use App\Support\TimeInput;
 use Carbon\CarbonImmutable;
@@ -13,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentRescheduleController extends Controller
 {
-    public function update(Request $request, Appointment $appointment, BookingEngine $booking): RedirectResponse
+    public function update(Request $request, Appointment $appointment, BookingEngine $booking, AppointmentNotificationService $notifications): RedirectResponse
     {
         $this->authorizeTenant($appointment);
 
@@ -49,12 +50,18 @@ class AppointmentRescheduleController extends Controller
         $metadata['last_rescheduled_by'] = $request->user()->id;
         $metadata['reschedule_contact_pending'] = true;
         $metadata['reschedule_contact_status'] = Appointment::CONTACT_PENDING;
+        $previousSchedule = [
+            'starts_at' => CarbonImmutable::parse($appointment->starts_at, $business->timezone),
+            'ends_at' => CarbonImmutable::parse($appointment->ends_at, $business->timezone),
+        ];
 
         $appointment->update([
             'starts_at' => $startsAt,
             'ends_at' => $startsAt->addMinutes($appointment->service->duration_minutes),
             'source_metadata' => $metadata,
         ]);
+
+        $notifications->appointmentRescheduled($appointment, $previousSchedule);
 
         return redirect(($attributes['return_to'] ?? null) ?: route('agenda.index', ['date' => $startsAt->toDateString()]))
             ->with('status', 'Cita reprogramada. Contacta al cliente para confirmar el cambio.');

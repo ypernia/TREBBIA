@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Mail\PublicBookingReceived;
+use App\Mail\AppointmentTransactionalNotification;
 use App\Models\Appointment;
 use App\Models\AppointmentReminder;
 use App\Models\AppointmentSlotLock;
@@ -1202,6 +1202,131 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_confirmed_internal_appointment_notifies_client(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
+        ]);
+        $client = $business->clients()->create(['name' => 'Ana Confirmada', 'email' => 'ana.confirmada@example.com']);
+        $service = $business->services()->create(['name' => 'Consulta confirmada', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        Mail::fake();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('agenda.store'), [
+                'client_id' => $client->id,
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '14:00',
+                'status' => Appointment::STATUS_CONFIRMED,
+            ])->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_confirmed'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('ana.confirmada@example.com');
+        });
+    }
+
+    public function test_cancelled_appointment_notifies_client(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
+        ]);
+        $client = $business->clients()->create(['name' => 'Ana Cancelada', 'email' => 'ana.cancelada@example.com']);
+        $service = $business->services()->create(['name' => 'Consulta cancelada', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 15:00:00',
+            'ends_at' => '2026-09-07 16:00:00',
+            'status' => Appointment::STATUS_CONFIRMED,
+        ]);
+
+        Mail::fake();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('agenda.update', $appointment), [
+                'client_id' => $client->id,
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '15:00',
+                'status' => Appointment::STATUS_CANCELLED,
+            ])->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_cancelled'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('ana.cancelada@example.com');
+        });
+    }
+
+    public function test_updated_appointment_schedule_notifies_client(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
+        ]);
+        $client = $business->clients()->create(['name' => 'Ana Editada', 'email' => 'ana.editada@example.com']);
+        $service = $business->services()->create(['name' => 'Consulta editada', 'duration_minutes' => 60, 'price_cents' => 80000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Mora', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+        $appointment = $business->appointments()->create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 14:00:00',
+            'ends_at' => '2026-09-07 15:00:00',
+            'status' => Appointment::STATUS_CONFIRMED,
+        ]);
+
+        Mail::fake();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->put(route('agenda.update', $appointment), [
+                'client_id' => $client->id,
+                'service_id' => $service->id,
+                'professional_id' => $professional->id,
+                'date' => '2026-09-07',
+                'starts_at' => '15:00',
+                'status' => Appointment::STATUS_CONFIRMED,
+            ])->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_rescheduled'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('ana.editada@example.com')
+                && $mail->previousSchedule !== null;
+        });
+    }
+
     public function test_blocked_time_preview_shows_affected_appointments_before_saving(): void
     {
         [$user, $business] = $this->tenantUser();
@@ -1273,8 +1398,15 @@ class TrebbiaFlowTest extends TestCase
     public function test_blocked_time_resolution_suggests_and_reschedules_affected_appointment(): void
     {
         [$user, $business] = $this->tenantUser();
-        $business->settings()->firstOrCreate([])->update(['slot_interval_minutes' => 30, 'booking_notice_minutes' => 0]);
-        $client = $business->clients()->create(['name' => 'Ana Reprogramar', 'phone' => '573001112233']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
+        ]);
+        $client = $business->clients()->create(['name' => 'Ana Reprogramar', 'email' => 'ana.reprogramar@example.com', 'phone' => '573001112233']);
         $service = $business->services()->create(['name' => 'Fisioterapia', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Laura Mora', 'is_active' => true]);
         $this->openWeekday($business, 1);
@@ -1304,6 +1436,8 @@ class TrebbiaFlowTest extends TestCase
             ->assertSee('10:00')
             ->assertSee('Mensaje sugerido');
 
+        Mail::fake();
+
         $this->actingAs($user)
             ->withSession(['business_id' => $business->id])
             ->patch(route('agenda.reschedule', $appointment), [
@@ -1312,6 +1446,13 @@ class TrebbiaFlowTest extends TestCase
                 'return_to' => route('blocked-times.show', $blockedTime),
             ])
             ->assertRedirect(route('blocked-times.show', $blockedTime));
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_rescheduled'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('ana.reprogramar@example.com')
+                && $mail->previousSchedule !== null;
+        });
 
         $appointment->refresh();
 
@@ -2294,8 +2435,9 @@ class TrebbiaFlowTest extends TestCase
             'notes' => 'Primera reserva desde la web.',
         ])->assertRedirect();
 
-        Mail::assertSent(PublicBookingReceived::class, function (PublicBookingReceived $mail): bool {
-            return $mail->requiresManualConfirmation
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'booking_requested'
+                && $mail->recipientType === 'business'
                 && $mail->hasTo('owner@example.com')
                 && $mail->envelope()->from->address === 'notificaciones@trebbia.app'
                 && $mail->envelope()->from->name === 'Notificaciones TREBBIA'
@@ -2353,9 +2495,17 @@ class TrebbiaFlowTest extends TestCase
             'client_email' => 'confirmado@example.com',
         ])->assertRedirect();
 
-        Mail::assertSent(PublicBookingReceived::class, function (PublicBookingReceived $mail): bool {
-            return ! $mail->requiresManualConfirmation
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'public_appointment_confirmed'
+                && $mail->recipientType === 'business'
                 && $mail->hasTo('owner@example.com')
+                && $mail->reservation instanceof Appointment;
+        });
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_confirmed'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('confirmado@example.com')
                 && $mail->reservation instanceof Appointment;
         });
 
@@ -2375,6 +2525,10 @@ class TrebbiaFlowTest extends TestCase
             'public_booking_settings' => [
                 'allow_public_booking' => true,
                 'require_manual_confirmation' => true,
+            ],
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
             ],
         ]);
         $service = $business->services()->create(['name' => 'Consulta idempotente', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
@@ -2409,6 +2563,10 @@ class TrebbiaFlowTest extends TestCase
                 'allow_public_booking' => true,
                 'require_manual_confirmation' => true,
             ],
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
         ]);
         $service = $business->services()->create(['name' => 'Consulta pendiente', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
         $professional = $business->professionals()->create(['name' => 'Dra. Pendiente', 'is_active' => true]);
@@ -2424,6 +2582,7 @@ class TrebbiaFlowTest extends TestCase
         ])->assertRedirect();
 
         $bookingRequest = $business->bookingRequests()->firstOrFail();
+        Mail::fake();
 
         $this->actingAs($user)
             ->withSession(['business_id' => $business->id])
@@ -2437,6 +2596,13 @@ class TrebbiaFlowTest extends TestCase
             ->patch(route('booking-requests.accept', $bookingRequest))
             ->assertRedirect(route('agenda.index', ['date' => '2026-09-07']));
 
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'appointment_confirmed'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('aprobar@example.com')
+                && $mail->reservation instanceof Appointment;
+        });
+
         $this->assertDatabaseHas('booking_requests', [
             'id' => $bookingRequest->id,
             'status' => BookingRequest::STATUS_ACCEPTED,
@@ -2448,6 +2614,58 @@ class TrebbiaFlowTest extends TestCase
             'service_id' => $service->id,
             'status' => Appointment::STATUS_CONFIRMED,
             'source_channel' => Appointment::SOURCE_PUBLIC_BOOKING,
+        ]);
+    }
+
+    public function test_rejected_booking_request_notifies_client(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'slot_interval_minutes' => 30,
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => [
+                'allow_public_booking' => true,
+                'require_manual_confirmation' => true,
+            ],
+            'notification_preferences' => [
+                'email' => true,
+                'whatsapp' => false,
+            ],
+        ]);
+        $service = $business->services()->create(['name' => 'Consulta rechazo', 'duration_minutes' => 60, 'price_cents' => 9000000, 'is_active' => true]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Rechazo', 'is_active' => true]);
+        $this->openWeekday($business, 1);
+
+        $this->post(route('public-booking.store', $business->slug), [
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+            'starts_at' => '12:00',
+            'client_name' => 'Cliente Rechazado',
+            'client_email' => 'rechazado@example.com',
+        ])->assertRedirect();
+
+        $bookingRequest = $business->bookingRequests()->firstOrFail();
+        Mail::fake();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->patch(route('booking-requests.reject', $bookingRequest), [
+                'decision_notes' => 'No hay disponibilidad real.',
+            ])
+            ->assertRedirect();
+
+        Mail::assertSent(AppointmentTransactionalNotification::class, function (AppointmentTransactionalNotification $mail): bool {
+            return $mail->event === 'booking_rejected'
+                && $mail->recipientType === 'client'
+                && $mail->hasTo('rechazado@example.com')
+                && $mail->reservation instanceof BookingRequest;
+        });
+
+        $this->assertDatabaseHas('booking_requests', [
+            'id' => $bookingRequest->id,
+            'status' => BookingRequest::STATUS_REJECTED,
         ]);
     }
 
