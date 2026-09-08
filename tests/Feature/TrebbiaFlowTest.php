@@ -2246,6 +2246,10 @@ class TrebbiaFlowTest extends TestCase
 
     public function test_public_booking_creates_client_and_appointment(): void
     {
+        config([
+            'mail.booking_from.address' => 'notificaciones@trebbia.app',
+            'mail.booking_from.name' => 'Notificaciones TREBBIA',
+        ]);
         [, $business] = $this->tenantUser();
         $business->update(['status' => 'active']);
         $business->settings()->firstOrCreate([])->update([
@@ -2293,6 +2297,8 @@ class TrebbiaFlowTest extends TestCase
         Mail::assertSent(PublicBookingReceived::class, function (PublicBookingReceived $mail): bool {
             return $mail->requiresManualConfirmation
                 && $mail->hasTo('owner@example.com')
+                && $mail->envelope()->from->address === 'notificaciones@trebbia.app'
+                && $mail->envelope()->from->name === 'Notificaciones TREBBIA'
                 && $mail->reservation instanceof BookingRequest;
         });
 
