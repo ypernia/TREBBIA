@@ -35,6 +35,36 @@ class TrebbiaFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_marketing_page_shows_trust_footer_and_legal_links(): void
+    {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Confianza')
+            ->assertSee('Tu información y la de tus clientes se maneja con reserva')
+            ->assertSee('TREBBIA es desarrollada por GEINAPPS')
+            ->assertSee(route('legal.privacy'), false)
+            ->assertSee(route('legal.data'), false)
+            ->assertSee(route('legal.terms'), false);
+    }
+
+    public function test_legal_pages_are_publicly_available(): void
+    {
+        $this->get(route('legal.terms'))
+            ->assertOk()
+            ->assertSee('Términos y condiciones')
+            ->assertSee('Uso de la plataforma');
+
+        $this->get(route('legal.privacy'))
+            ->assertOk()
+            ->assertSee('Política de privacidad')
+            ->assertSee('Reserva y confidencialidad');
+
+        $this->get(route('legal.data'))
+            ->assertOk()
+            ->assertSee('Tratamiento de datos')
+            ->assertSee('Datos sensibles');
+    }
+
     public function test_user_can_register_create_business_complete_onboarding_and_open_dashboard(): void
     {
         $this->post(route('register.store'), [

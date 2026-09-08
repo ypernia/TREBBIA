@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'trebbia. | Centro Inteligente de Reservas y Agendamiento')
+@section('title', 'TREBBIA | Centro Inteligente de Reservas y Agendamiento')
 
 @section('content')
     @php
@@ -11,6 +11,7 @@
             ['label' => 'Beneficios', 'href' => '#beneficios'],
             ['label' => 'Capacidades', 'href' => '#capacidades'],
             ['label' => 'Planes', 'href' => '#planes'],
+            ['label' => 'Confianza', 'href' => '#confianza'],
         ];
 
         $channels = [
@@ -45,9 +46,9 @@
         ];
 
         $plans = [
-            ['name' => 'Esencial', 'copy' => 'Para negocios pequenos que quieren ordenar su agenda, clientes y reservas desde una base real de operacion.'],
-            ['name' => 'Profesional', 'copy' => 'Para equipos que necesitan mas capacidad, automatizaciones, WhatsApp asistido y reportes completos.'],
-            ['name' => 'Empresarial', 'copy' => 'Para operaciones con varias sedes, mas volumen, equipo completo y acompanamiento prioritario.'],
+            ['name' => 'Esencial', 'copy' => 'Para negocios pequeños que quieren ordenar su agenda, clientes y reservas desde una base real de operación.'],
+            ['name' => 'Profesional', 'copy' => 'Para equipos que necesitan más capacidad, automatizaciones, WhatsApp asistido y reportes completos.'],
+            ['name' => 'Empresarial', 'copy' => 'Para operaciones con varias sedes, más volumen, equipo completo y acompañamiento prioritario.'],
         ];
 
         $productCards = [
@@ -60,6 +61,12 @@
             ['title' => 'Configura tu negocio', 'copy' => 'Servicios, profesionales, recursos y horarios.'],
             ['title' => 'Organiza tu agenda', 'copy' => 'Centraliza citas, disponibilidad y responsables.'],
             ['title' => 'Recibe reservas', 'copy' => 'Gestiona solicitudes desde TREBBIA, WhatsApp y enlace público.'],
+        ];
+
+        $trustItems = [
+            ['title' => 'Información reservada', 'copy' => 'Los datos de clientes, agenda e historial operativo se manejan como información confidencial del negocio.'],
+            ['title' => 'Acceso por roles', 'copy' => 'Cada usuario entra con permisos según su rol dentro del negocio, sin mezclar información entre empresas.'],
+            ['title' => 'Soporte controlado', 'copy' => 'El acceso a información sensible debe tener motivo, autorización y trazabilidad cuando aplique.'],
         ];
     @endphp
 
@@ -243,6 +250,29 @@
                 </div>
             </section>
 
+            <section id="confianza" class="bg-[var(--trebbia-bg)] px-5 py-16 lg:px-8">
+                <div class="mx-auto max-w-7xl">
+                    <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+                        <div>
+                            <p class="trebbia-commercial-kicker">Confianza</p>
+                            <h2 class="trebbia-commercial-title mt-4 text-3xl sm:text-4xl">Tu información y la de tus clientes se maneja con reserva.</h2>
+                            <p class="mt-5 max-w-xl text-base leading-7 text-[var(--trebbia-muted)]">
+                                TREBBIA fue pensada para negocios que necesitan orden, trazabilidad y privacidad en su operación diaria. Cada empresa conserva el control de sus datos, usuarios, agenda y clientes.
+                            </p>
+                        </div>
+                        <div class="grid gap-4">
+                            @foreach ($trustItems as $item)
+                                <article class="rounded-2xl border border-[var(--trebbia-line)] bg-white p-5">
+                                    <span class="mb-5 block h-2 w-12 rounded-full bg-[var(--trebbia-aqua)]"></span>
+                                    <h3 class="text-xl font-semibold">{{ $item['title'] }}</h3>
+                                    <p class="mt-3 text-sm leading-6 text-[var(--trebbia-muted)]">{{ $item['copy'] }}</p>
+                                </article>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="planes" class="bg-[var(--trebbia-bg-soft)] px-5 py-16 lg:px-8">
                 <div class="mx-auto max-w-7xl">
                     <div class="max-w-2xl">
@@ -262,14 +292,6 @@
             </section>
         </main>
 
-        <footer class="border-t border-[var(--trebbia-line)] bg-white px-5 py-10 lg:px-8">
-            <div class="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <x-trebbia-logo class="w-72 sm:w-80" />
-                <div class="flex gap-3">
-                    <a class="rounded-md border border-[var(--trebbia-line)] px-4 py-2 text-sm font-medium text-[var(--trebbia-petrol)] hover:border-[var(--trebbia-aqua)]" href="{{ route('login') }}">Entrar</a>
-                    <a class="rounded-md bg-[var(--trebbia-petrol)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--trebbia-petrol-dark)]" href="{{ route('register') }}">Crear cuenta</a>
-                </div>
-            </div>
-        </footer>
+        @include('partials.marketing-footer')
     </div>
 @endsection
