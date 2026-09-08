@@ -100,10 +100,10 @@ class ProfessionalController extends Controller
             'service_ids' => ['nullable', 'array'],
             'service_ids.*' => [Rule::exists('services', 'id')->where('business_id', $business->id)],
             'schedule' => ['nullable', 'array'],
-            'schedule.*.starts_at' => ['nullable', 'date_format:H:i'],
-            'schedule.*.ends_at' => ['nullable', 'date_format:H:i'],
+            'schedule.*.starts_at' => ['nullable', 'date_format:H:i,H:i:s'],
+            'schedule.*.ends_at' => ['nullable', 'date_format:H:i,H:i:s'],
             'schedule.*.is_closed' => ['nullable', 'boolean'],
-        ]);
+        ], $this->scheduleMessages(), $this->scheduleAttributes());
 
         foreach ($this->weekdays() as $weekday => $label) {
             if (! array_key_exists($weekday, $attributes['schedule'] ?? [])) {
@@ -114,9 +114,9 @@ class ProfessionalController extends Controller
             $isClosed = (bool) ($row['is_closed'] ?? false);
 
             $request->validate([
-                "schedule.{$weekday}.ends_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i', "after:schedule.{$weekday}.starts_at"],
-                "schedule.{$weekday}.starts_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i'],
-            ]);
+                "schedule.{$weekday}.ends_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i,H:i:s', "after:schedule.{$weekday}.starts_at"],
+                "schedule.{$weekday}.starts_at" => [$isClosed ? 'nullable' : 'required', 'date_format:H:i,H:i:s'],
+            ], $this->scheduleMessages(), $this->scheduleAttributes());
         }
 
         return [
@@ -156,8 +156,8 @@ class ProfessionalController extends Controller
             ProfessionalSchedule::updateOrCreate(
                 ['business_id' => app('activeBusiness')->id, 'professional_id' => $professional->id, 'weekday' => $weekday],
                 [
-                    'starts_at' => $isClosed ? null : $row['starts_at'],
-                    'ends_at' => $isClosed ? null : $row['ends_at'],
+                    'starts_at' => $isClosed ? null : $this->normalizeTime($row['starts_at']),
+                    'ends_at' => $isClosed ? null : $this->normalizeTime($row['ends_at']),
                     'is_closed' => $isClosed,
                 ],
             );
@@ -175,5 +175,34 @@ class ProfessionalController extends Controller
             6 => 'Sabado',
             7 => 'Domingo',
         ];
+    }
+
+    private function scheduleAttributes(): array
+    {
+        $attributes = [];
+
+        foreach ($this->weekdays() as $weekday => $label) {
+            $attributes["schedule.{$weekday}.starts_at"] = "{$label} - hora de inicio";
+            $attributes["schedule.{$weekday}.ends_at"] = "{$label} - hora de fin";
+            $attributes["schedule.{$weekday}.is_closed"] = "{$label} cerrado";
+        }
+
+        return $attributes;
+    }
+
+    private function scheduleMessages(): array
+    {
+        return [
+            'schedule.*.starts_at.required' => ':attribute es obligatoria si el dia esta abierto.',
+            'schedule.*.ends_at.required' => ':attribute es obligatoria si el dia esta abierto.',
+            'schedule.*.starts_at.date_format' => ':attribute debe ser una hora valida, por ejemplo 08:00.',
+            'schedule.*.ends_at.date_format' => ':attribute debe ser una hora valida, por ejemplo 18:00.',
+            'schedule.*.ends_at.after' => ':attribute debe ser posterior a la hora de inicio.',
+        ];
+    }
+
+    private function normalizeTime(?string $time): ?string
+    {
+        return $time ? substr($time, 0, 5) : null;
     }
 }

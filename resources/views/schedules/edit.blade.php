@@ -18,16 +18,20 @@
             @csrf
             @method('PUT')
             @foreach ($weekdays as $weekday => $label)
-                @php $schedule = $schedules->get($weekday); @endphp
+                @php
+                    $schedule = $schedules->get($weekday);
+                    $opensAt = old("schedule.{$weekday}.opens_at", $schedule?->opens_at ? substr($schedule->opens_at, 0, 5) : '08:00');
+                    $closesAt = old("schedule.{$weekday}.closes_at", $schedule?->closes_at ? substr($schedule->closes_at, 0, 5) : '18:00');
+                @endphp
                 <div class="grid gap-3 rounded-md border border-[#e1e6e0] bg-white p-4 md:grid-cols-[10rem_1fr_1fr_8rem] md:items-center">
                     <p class="font-bold">{{ $label }}</p>
                     <div>
                         <label class="trebbia-label" for="schedule_{{ $weekday }}_opens_at">Abre</label>
-                        <input class="trebbia-input" id="schedule_{{ $weekday }}_opens_at" type="time" name="schedule[{{ $weekday }}][opens_at]" value="{{ old("schedule.{$weekday}.opens_at", $schedule?->opens_at ?? '08:00') }}">
+                        <input class="trebbia-input" id="schedule_{{ $weekday }}_opens_at" type="time" name="schedule[{{ $weekday }}][opens_at]" value="{{ $opensAt }}">
                     </div>
                     <div>
                         <label class="trebbia-label" for="schedule_{{ $weekday }}_closes_at">Cierra</label>
-                        <input class="trebbia-input" id="schedule_{{ $weekday }}_closes_at" type="time" name="schedule[{{ $weekday }}][closes_at]" value="{{ old("schedule.{$weekday}.closes_at", $schedule?->closes_at ?? '18:00') }}">
+                        <input class="trebbia-input" id="schedule_{{ $weekday }}_closes_at" type="time" name="schedule[{{ $weekday }}][closes_at]" value="{{ $closesAt }}">
                     </div>
                     <label class="flex items-center gap-2 text-sm font-semibold text-[#53615d]">
                         <input type="hidden" name="schedule[{{ $weekday }}][is_closed]" value="0">

@@ -747,7 +747,7 @@ class TrebbiaFlowTest extends TestCase
             ->withSession(['business_id' => $business->id])
             ->put(route('schedules.update'), [
                 'schedule' => [
-                    1 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
+                    1 => ['opens_at' => '08:00:00', 'closes_at' => '17:00:00', 'is_closed' => 0],
                     2 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
                     3 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
                     4 => ['opens_at' => '08:00', 'closes_at' => '17:00', 'is_closed' => 0],
@@ -760,9 +760,40 @@ class TrebbiaFlowTest extends TestCase
         $this->assertSame(7, BusinessSchedule::where('business_id', $business->id)->count());
         $this->assertDatabaseHas('business_schedules', [
             'business_id' => $business->id,
+            'weekday' => 1,
+            'opens_at' => '08:00',
+            'closes_at' => '17:00',
+            'is_closed' => false,
+        ]);
+        $this->assertDatabaseHas('business_schedules', [
+            'business_id' => $business->id,
             'weekday' => 6,
             'is_closed' => true,
         ]);
+    }
+
+    public function test_business_schedule_validation_uses_readable_day_labels(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $response = $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->from(route('schedules.edit'))
+            ->put(route('schedules.update'), [
+                'schedule' => [
+                    1 => ['opens_at' => 'bad', 'closes_at' => '17:00', 'is_closed' => 0],
+                ],
+            ]);
+
+        $response->assertRedirect(route('schedules.edit'))
+            ->assertSessionHasErrors('schedule.1.opens_at');
+
+        $message = session('errors')->first('schedule.1.opens_at');
+
+        $this->assertStringContainsString('Lunes - hora de apertura', $message);
+        $this->assertStringContainsString('hora valida', $message);
+        $this->assertStringNotContainsString('schedule.1.opens_at', $message);
+        $this->assertStringNotContainsString('formato H:i', $message);
     }
 
     public function test_business_settings_profile_preferences_and_branches_can_be_updated(): void
@@ -1354,7 +1385,7 @@ class TrebbiaFlowTest extends TestCase
                 'is_active' => 1,
                 'service_ids' => [$service->id],
                 'schedule' => [
-                    1 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
+                    1 => ['starts_at' => '09:00:00', 'ends_at' => '17:00:00', 'is_closed' => 0],
                     2 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
                     3 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],
                     4 => ['starts_at' => '09:00', 'ends_at' => '17:00', 'is_closed' => 0],

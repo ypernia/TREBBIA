@@ -57,16 +57,18 @@
                         @php
                             $schedule = $schedules->get($weekday);
                             $isClosed = (bool) old("schedule.$weekday.is_closed", $schedule?->is_closed ?? false);
+                            $startsAt = old("schedule.$weekday.starts_at", $schedule?->starts_at ? substr($schedule->starts_at, 0, 5) : '08:00');
+                            $endsAt = old("schedule.$weekday.ends_at", $schedule?->ends_at ? substr($schedule->ends_at, 0, 5) : '18:00');
                         @endphp
                         <div class="grid gap-3 border-b border-[#e7ebe7] p-3 md:grid-cols-[8rem_1fr_1fr_8rem] md:items-center">
                             <p class="font-semibold">{{ $label }}</p>
                             <div>
                                 <label class="sr-only" for="schedule_{{ $weekday }}_starts_at">Inicio {{ $label }}</label>
-                                <input class="trebbia-input" id="schedule_{{ $weekday }}_starts_at" type="time" name="schedule[{{ $weekday }}][starts_at]" value="{{ old("schedule.$weekday.starts_at", $schedule?->starts_at ?? '08:00') }}">
+                                <input class="trebbia-input" id="schedule_{{ $weekday }}_starts_at" type="time" name="schedule[{{ $weekday }}][starts_at]" value="{{ $startsAt }}">
                             </div>
                             <div>
                                 <label class="sr-only" for="schedule_{{ $weekday }}_ends_at">Fin {{ $label }}</label>
-                                <input class="trebbia-input" id="schedule_{{ $weekday }}_ends_at" type="time" name="schedule[{{ $weekday }}][ends_at]" value="{{ old("schedule.$weekday.ends_at", $schedule?->ends_at ?? '18:00') }}">
+                                <input class="trebbia-input" id="schedule_{{ $weekday }}_ends_at" type="time" name="schedule[{{ $weekday }}][ends_at]" value="{{ $endsAt }}">
                             </div>
                             <label class="flex items-center gap-2 text-sm font-semibold text-[#53615d]">
                                 <input type="hidden" name="schedule[{{ $weekday }}][is_closed]" value="0">
