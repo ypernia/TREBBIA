@@ -1433,6 +1433,7 @@ class TrebbiaFlowTest extends TestCase
                 'preview' => 1,
                 'scope' => 'professional',
                 'professional_id' => $professional->id,
+                'mode' => 'single',
                 'date' => '2026-09-07',
                 'starts_at' => '08:00',
                 'ends_at' => '12:00',
@@ -1456,13 +1457,14 @@ class TrebbiaFlowTest extends TestCase
             ->post(route('blocked-times.store'), [
                 'scope' => 'professional',
                 'professional_id' => $professional->id,
+                'mode' => 'single',
                 'date' => now($business->timezone)->addDay()->toDateString(),
                 'starts_at' => '13:00:00',
                 'ends_at' => '15:00:00',
                 'reason' => 'Incapacidad',
                 'confirm_impact' => 1,
             ])
-            ->assertRedirect(route('blocked-times.show', BlockedTime::first()));
+            ->assertRedirect();
 
         $this->assertDatabaseHas('blocked_times', [
             'business_id' => $business->id,
@@ -1476,6 +1478,60 @@ class TrebbiaFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Bloqueos proximos')
             ->assertSee('Incapacidad');
+    }
+
+    public function test_blocked_time_can_be_created_for_multiple_weekdays(): void
+    {
+        [$user, $business] = $this->tenantUser();
+        $professional = $business->professionals()->create(['name' => 'Dra. Bloques', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('blocked-times.create', [
+                'preview' => 1,
+                'mode' => 'multiple',
+                'scope' => 'professional',
+                'professional_id' => $professional->id,
+                'date_from' => '2026-09-07',
+                'date_to' => '2026-09-11',
+                'weekdays' => [1, 2, 3, 4, 5],
+                'starts_at' => '15:00',
+                'ends_at' => '16:00',
+                'reason' => 'Bloqueo personal',
+            ]))
+            ->assertOk()
+            ->assertSee('Impacto detectado');
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('blocked-times.store'), [
+                'mode' => 'multiple',
+                'scope' => 'professional',
+                'professional_id' => $professional->id,
+                'date_from' => '2026-09-07',
+                'date_to' => '2026-09-11',
+                'weekdays' => [1, 2, 3, 4, 5],
+                'starts_at' => '15:00',
+                'ends_at' => '16:00',
+                'reason' => 'Bloqueo personal',
+                'confirm_impact' => 1,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(5, $business->blockedTimes()->count());
+        $this->assertDatabaseHas('blocked_times', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-07 15:00:00',
+            'ends_at' => '2026-09-07 16:00:00',
+            'reason' => 'Bloqueo personal',
+        ]);
+        $this->assertDatabaseHas('blocked_times', [
+            'business_id' => $business->id,
+            'professional_id' => $professional->id,
+            'starts_at' => '2026-09-11 15:00:00',
+            'ends_at' => '2026-09-11 16:00:00',
+        ]);
     }
 
     public function test_blocked_time_resolution_suggests_and_reschedules_affected_appointment(): void

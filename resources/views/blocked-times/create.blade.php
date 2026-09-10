@@ -5,6 +5,20 @@
 @section('page-title', 'Bloquear tiempo')
 
 @section('content')
+    @php
+        $mode = $attributes['mode'] ?? 'single';
+        $returnDate = $attributes['date'] ?? $attributes['date_from'] ?? now($business->timezone)->toDateString();
+        $selectedWeekdays = collect($attributes['weekdays'] ?? [])->map(fn ($weekday) => (string) $weekday)->all();
+        $weekdayOptions = [
+            1 => 'Lun',
+            2 => 'Mar',
+            3 => 'Mie',
+            4 => 'Jue',
+            5 => 'Vie',
+            6 => 'Sab',
+            7 => 'Dom',
+        ];
+    @endphp
     @include('partials.errors')
 
     <div class="grid gap-6 xl:grid-cols-[1fr_24rem]">
@@ -17,6 +31,14 @@
 
             <form method="GET" action="{{ route('blocked-times.create') }}" class="mt-6 grid gap-4 md:grid-cols-2">
                 <input type="hidden" name="preview" value="1">
+
+                <div class="md:col-span-2">
+                    <label class="trebbia-label" for="mode">Aplicar bloqueo</label>
+                    <select class="trebbia-input" id="mode" name="mode" required>
+                        <option value="single" @selected($mode === 'single')>Una fecha especifica</option>
+                        <option value="multiple" @selected($mode === 'multiple')>Varios dias</option>
+                    </select>
+                </div>
 
                 <div>
                     <label class="trebbia-label" for="scope">Tipo de bloqueo</label>
@@ -47,9 +69,31 @@
                     </select>
                 </div>
 
-                <div>
+                <div data-mode-field="single">
                     <label class="trebbia-label" for="date">Fecha</label>
-                    <input class="trebbia-input" id="date" name="date" type="date" value="{{ $attributes['date'] }}" required>
+                    <input class="trebbia-input" id="date" name="date" type="date" value="{{ $returnDate }}" required>
+                </div>
+
+                <div data-mode-field="multiple">
+                    <label class="trebbia-label" for="date_from">Desde fecha</label>
+                    <input class="trebbia-input" id="date_from" name="date_from" type="date" value="{{ $attributes['date_from'] ?? $returnDate }}">
+                </div>
+
+                <div data-mode-field="multiple">
+                    <label class="trebbia-label" for="date_to">Hasta fecha</label>
+                    <input class="trebbia-input" id="date_to" name="date_to" type="date" value="{{ $attributes['date_to'] ?? $returnDate }}">
+                </div>
+
+                <div class="md:col-span-2" data-mode-field="multiple">
+                    <p class="trebbia-label">Dias</p>
+                    <div class="grid gap-2 rounded-md border border-[#d7ddd7] bg-white p-3 sm:grid-cols-7">
+                        @foreach ($weekdayOptions as $weekday => $label)
+                            <label class="flex items-center justify-center gap-2 rounded-md border border-[#e1e6e0] px-3 py-2 text-sm font-bold text-[#53615d] has-[:checked]:border-[#245f57] has-[:checked]:bg-[#edf7f4] has-[:checked]:text-[#245f57]">
+                                <input type="checkbox" name="weekdays[]" value="{{ $weekday }}" @checked(in_array((string) $weekday, $selectedWeekdays, true))>
+                                {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div>
@@ -73,7 +117,7 @@
 
                 <div class="flex flex-col gap-3 sm:flex-row md:col-span-2">
                     <button class="trebbia-button">Revisar impacto</button>
-                    <a class="trebbia-button trebbia-button-secondary" href="{{ route('agenda.index', ['date' => $attributes['date']]) }}">Volver a agenda</a>
+                    <a class="trebbia-button trebbia-button-secondary" href="{{ route('agenda.index', ['date' => $returnDate]) }}">Volver a agenda</a>
                 </div>
             </form>
         </section>
@@ -81,7 +125,7 @@
         <aside class="space-y-6">
             <section class="trebbia-card p-5">
                 <h2 class="text-lg font-bold">Siguiente paso</h2>
-                <p class="mt-2 text-sm leading-6 text-[#64716d]">Primero revisa el impacto. Si todo esta correcto, confirma el bloqueo. En una fase posterior TREBBIA ayudara a resolver citas afectadas.</p>
+                <p class="mt-2 text-sm leading-6 text-[#64716d]">Primero revisa el impacto. Si todo esta correcto, confirma el bloqueo. Puedes bloquear una fecha puntual o repetir el mismo horario en varios dias.</p>
             </section>
         </aside>
     </div>
@@ -118,8 +162,11 @@
 
             <form method="POST" action="{{ route('blocked-times.store') }}" class="border-t border-[#e7ebe7] p-5">
                 @csrf
-                @foreach (['scope', 'professional_id', 'resource_id', 'date', 'starts_at', 'ends_at', 'reason'] as $field)
+                @foreach (['scope', 'professional_id', 'resource_id', 'mode', 'date', 'date_from', 'date_to', 'starts_at', 'ends_at', 'reason'] as $field)
                     <input type="hidden" name="{{ $field }}" value="{{ $attributes[$field] ?? '' }}">
+                @endforeach
+                @foreach ($attributes['weekdays'] ?? [] as $weekday)
+                    <input type="hidden" name="weekdays[]" value="{{ $weekday }}">
                 @endforeach
                 <label class="mb-4 flex items-start gap-3 text-sm font-semibold text-[#53615d]">
                     <input class="mt-1" type="checkbox" name="confirm_impact" value="1" required>
@@ -132,15 +179,33 @@
 
     <script>
         const scope = document.getElementById('scope');
+        const mode = document.getElementById('mode');
         const professionalField = document.getElementById('professional-field');
         const resourceField = document.getElementById('resource-field');
+        const singleFields = document.querySelectorAll('[data-mode-field="single"]');
+        const multipleFields = document.querySelectorAll('[data-mode-field="multiple"]');
+        const date = document.getElementById('date');
+        const dateFrom = document.getElementById('date_from');
+        const dateTo = document.getElementById('date_to');
 
         function syncScopeFields() {
             professionalField.hidden = scope.value !== 'professional';
             resourceField.hidden = scope.value !== 'resource';
         }
 
+        function syncModeFields() {
+            const isMultiple = mode.value === 'multiple';
+
+            singleFields.forEach((field) => field.hidden = isMultiple);
+            multipleFields.forEach((field) => field.hidden = ! isMultiple);
+            date.required = ! isMultiple;
+            dateFrom.required = isMultiple;
+            dateTo.required = isMultiple;
+        }
+
         scope.addEventListener('change', syncScopeFields);
+        mode.addEventListener('change', syncModeFields);
         syncScopeFields();
+        syncModeFields();
     </script>
 @endsection
