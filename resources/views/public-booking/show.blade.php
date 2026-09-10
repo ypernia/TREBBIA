@@ -47,7 +47,7 @@
                 @if (! empty($bookingAlternatives))
                     <div class="mt-3 text-[#53615d]">
                         <p class="font-bold text-[#18211f]">Opciones disponibles:</p>
-                        <p>{{ implode(' · ', $bookingAlternatives) }}</p>
+                        <p>{{ implode(' - ', $bookingAlternatives) }}</p>
                     </div>
                 @endif
             </div>
@@ -63,7 +63,7 @@
                         <select class="trebbia-input" id="service_id" name="service_id" required>
                             <option value="">Seleccionar</option>
                             @foreach ($services as $service)
-                                <option value="{{ $service->id }}" @selected($selectedService?->id === $service->id)>{{ $service->name }} - {{ $service->duration_minutes }} min</option>
+                                <option value="{{ $service->id }}" @selected($selectedService?->id === $service->id)>{{ $service->name }} - {{ $service->duration_minutes }} min - {{ $service->priceLabel() }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -133,6 +133,9 @@
                     <h2 class="text-lg font-bold">Detalle</h2>
                     <div class="mt-4 space-y-3 text-sm text-[#53615d]">
                         <p><span class="font-bold text-[#18211f]">Servicio:</span> {{ $selectedService?->name ?: 'Por seleccionar' }}</p>
+                        @if ($selectedService)
+                            <p><span class="font-bold text-[#18211f]">Precio:</span> {{ $selectedService->priceLabel() }}</p>
+                        @endif
                         <p><span class="font-bold text-[#18211f]">Profesional:</span> {{ $selectedProfessional?->name ?: 'Por seleccionar' }}</p>
                         <p><span class="font-bold text-[#18211f]">Fecha:</span> {{ $date->format('d/m/Y') }}</p>
                         <p><span class="font-bold text-[#18211f]">Confirmacion:</span> {{ ($settings->public_booking_settings['require_manual_confirmation'] ?? true) ? 'Manual' : 'Automatica' }}</p>

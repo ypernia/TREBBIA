@@ -36,7 +36,7 @@
                                 <input class="mt-1" type="checkbox" name="services[{{ $index }}][selected]" value="1" @checked(! $exists) @disabled($exists)>
                                 <span>
                                     <span class="block font-bold">{{ $service['name'] }}</span>
-                                    <span class="mt-1 block text-sm text-[#64716d]">{{ $service['duration_minutes'] }} min · ${{ number_format($service['price'], 0, ',', '.') }}</span>
+                                    <span class="mt-1 block text-sm text-[#64716d]">{{ $service['duration_minutes'] }} min - ${{ number_format($service['price'], 0, ',', '.') }}</span>
                                     <span class="mt-1 block text-sm text-[#64716d]">
                                         @if ($exists)
                                             Ya existe en tu catalogo.
@@ -64,7 +64,7 @@
                     <p class="mt-1 text-sm text-[#64716d]">{{ $service->description ?: 'Sin descripcion' }}</p>
                 </div>
                 <p class="text-sm font-semibold">{{ $service->duration_minutes }} min</p>
-                <p class="text-sm font-semibold">${{ number_format($service->price_cents / 100, 0, ',', '.') }}</p>
+                <p class="text-sm font-semibold">{{ $service->priceLabel() }}</p>
                 <p class="text-sm text-[#64716d]">{{ $service->professionals_count }} profesional{{ $service->professionals_count === 1 ? '' : 'es' }}</p>
                 <div class="flex items-center gap-2 md:justify-end">
                     <span class="rounded-md px-2 py-1 text-xs font-bold {{ $service->is_active ? 'bg-[#edf7f4] text-[#245f57]' : 'bg-[#f1f1ef] text-[#64716d]' }}">{{ $service->is_active ? 'Activo' : 'Inactivo' }}</span>

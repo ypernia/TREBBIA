@@ -82,7 +82,9 @@ class ServiceController extends Controller
             $payload = [
                 'name' => $service['name'],
                 'duration_minutes' => $service['duration_minutes'],
+                'price_type' => Service::PRICE_FIXED,
                 'price_cents' => (int) round(($service['price'] ?? 0) * 100),
+                'price_max_cents' => null,
                 'description' => $service['description'] ?? null,
                 'is_active' => true,
             ];
@@ -131,6 +133,10 @@ class ServiceController extends Controller
 
     private function validated(Request $request): array
     {
+        $request->merge([
+            'price_type' => $request->input('price_type', Service::PRICE_FIXED),
+        ]);
+
         $attributes = $request->validate([
             'name' => [
                 'required',
@@ -139,18 +145,34 @@ class ServiceController extends Controller
                 Rule::unique('services')->where('business_id', app('activeBusiness')->id)->ignore($request->route('servicio')),
             ],
             'duration_minutes' => ['required', 'integer', 'min:10', 'max:720'],
-            'price' => ['nullable', 'numeric', 'min:0'],
+            'price_type' => ['required', Rule::in(array_keys(Service::priceTypeLabels()))],
+            'price' => ['nullable', 'required_unless:price_type,'.Service::PRICE_TO_DEFINE, 'numeric', 'min:0'],
+            'price_max' => ['nullable', 'required_if:price_type,'.Service::PRICE_RANGE, 'numeric', 'min:0', 'gte:price'],
             'description' => ['nullable', 'string', 'max:800'],
             'is_active' => ['nullable', 'boolean'],
             'professional_ids' => ['nullable', 'array'],
             'professional_ids.*' => [Rule::exists('professionals', 'id')->where('business_id', app('activeBusiness')->id)],
+        ], [
+            'price.required_unless' => 'Indica el precio del servicio.',
+            'price_max.required_if' => 'Indica el precio maximo del rango.',
+            'price_max.gte' => 'El precio maximo debe ser mayor o igual al precio inicial.',
+        ], [
+            'price_type' => 'tipo de precio',
+            'price' => 'precio inicial',
+            'price_max' => 'precio maximo',
         ]);
 
         return [
             'service' => [
                 'name' => $attributes['name'],
                 'duration_minutes' => $attributes['duration_minutes'],
-                'price_cents' => (int) round(($attributes['price'] ?? 0) * 100),
+                'price_type' => $attributes['price_type'],
+                'price_cents' => $attributes['price_type'] === Service::PRICE_TO_DEFINE
+                    ? 0
+                    : (int) round(($attributes['price'] ?? 0) * 100),
+                'price_max_cents' => $attributes['price_type'] === Service::PRICE_RANGE
+                    ? (int) round(($attributes['price_max'] ?? $attributes['price'] ?? 0) * 100)
+                    : null,
                 'description' => $attributes['description'] ?? null,
                 'is_active' => $request->boolean('is_active'),
             ],

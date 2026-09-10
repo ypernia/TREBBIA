@@ -5,6 +5,9 @@
 @section('page-title', $service->exists ? 'Editar servicio' : 'Nuevo servicio')
 
 @section('content')
+    @php
+        $selectedPriceType = old('price_type', $service->price_type ?: \App\Models\Service::PRICE_FIXED);
+    @endphp
     <div class="trebbia-card max-w-3xl p-6">
         @include('partials.errors')
         <form method="POST" action="{{ $service->exists ? route('servicios.update', $service) : route('servicios.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
@@ -21,8 +24,20 @@
                 <input class="trebbia-input" id="duration_minutes" type="number" min="10" name="duration_minutes" value="{{ old('duration_minutes', $service->duration_minutes ?? 60) }}" required>
             </div>
             <div>
-                <label class="trebbia-label" for="price">Precio</label>
+                <label class="trebbia-label" for="price_type">Tipo de precio</label>
+                <select class="trebbia-input" id="price_type" name="price_type" required>
+                    @foreach (\App\Models\Service::priceTypeLabels() as $value => $label)
+                        <option value="{{ $value }}" @selected($selectedPriceType === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div data-price-field="min">
+                <label class="trebbia-label" for="price">Precio inicial</label>
                 <input class="trebbia-input" id="price" type="number" min="0" step="0.01" name="price" value="{{ old('price', $service->exists ? $service->price_cents / 100 : 0) }}">
+            </div>
+            <div data-price-field="max">
+                <label class="trebbia-label" for="price_max">Precio maximo</label>
+                <input class="trebbia-input" id="price_max" type="number" min="0" step="0.01" name="price_max" value="{{ old('price_max', $service->exists ? $service->price_max_cents / 100 : null) }}">
             </div>
             <div class="sm:col-span-2">
                 <label class="trebbia-label" for="description">Descripcion</label>
@@ -52,4 +67,22 @@
             </div>
         </form>
     </div>
+    <script>
+        const priceType = document.getElementById('price_type');
+        const minField = document.querySelector('[data-price-field="min"]');
+        const maxField = document.querySelector('[data-price-field="max"]');
+        const priceInput = document.getElementById('price');
+        const maxInput = document.getElementById('price_max');
+
+        function syncPriceFields() {
+            const type = priceType.value;
+            minField.classList.toggle('hidden', type === 'to_define');
+            maxField.classList.toggle('hidden', type !== 'range');
+            priceInput.required = type !== 'to_define';
+            maxInput.required = type === 'range';
+        }
+
+        priceType.addEventListener('change', syncPriceFields);
+        syncPriceFields();
+    </script>
 @endsection

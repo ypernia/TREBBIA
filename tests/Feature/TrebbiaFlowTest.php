@@ -270,6 +270,89 @@ class TrebbiaFlowTest extends TestCase
         ]);
     }
 
+    public function test_service_can_use_price_range_or_price_to_define(): void
+    {
+        [$user, $business] = $this->tenantUser();
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('servicios.store'), [
+                'name' => 'Fisioterapia por complejidad',
+                'duration_minutes' => 60,
+                'price_type' => Service::PRICE_RANGE,
+                'price' => 90000,
+                'price_max' => 140000,
+                'description' => 'El valor cambia segun zona y complejidad.',
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('servicios.index'));
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->post(route('servicios.store'), [
+                'name' => 'Valoracion especializada',
+                'duration_minutes' => 60,
+                'price_type' => Service::PRICE_TO_DEFINE,
+                'description' => 'El valor se define despues de revisar el caso.',
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('servicios.index'));
+
+        $this->assertDatabaseHas('services', [
+            'business_id' => $business->id,
+            'name' => 'Fisioterapia por complejidad',
+            'price_type' => Service::PRICE_RANGE,
+            'price_cents' => 9000000,
+            'price_max_cents' => 14000000,
+        ]);
+        $this->assertDatabaseHas('services', [
+            'business_id' => $business->id,
+            'name' => 'Valoracion especializada',
+            'price_type' => Service::PRICE_TO_DEFINE,
+            'price_cents' => 0,
+            'price_max_cents' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['business_id' => $business->id])
+            ->get(route('servicios.index'))
+            ->assertOk()
+            ->assertSee('$90.000 - $140.000')
+            ->assertSee('Precio a definir');
+    }
+
+    public function test_public_booking_shows_flexible_service_price(): void
+    {
+        [, $business] = $this->tenantUser();
+        $business->update(['status' => 'active']);
+        $business->settings()->firstOrCreate([])->update([
+            'booking_notice_minutes' => 0,
+            'public_booking_settings' => ['allow_public_booking' => true],
+        ]);
+        $service = $business->services()->create([
+            'name' => 'Fisioterapia avanzada',
+            'duration_minutes' => 60,
+            'price_type' => Service::PRICE_RANGE,
+            'price_cents' => 9000000,
+            'price_max_cents' => 14000000,
+            'is_active' => true,
+        ]);
+        $professional = $business->professionals()->create(['name' => 'Dra. Rango', 'is_active' => true]);
+        $service->professionals()->syncWithPivotValues([$professional->id], ['business_id' => $business->id]);
+        $this->openWeekday($business, 1);
+
+        $this->get(route('public-booking.show', [
+            $business->slug,
+            'service_id' => $service->id,
+            'professional_id' => $professional->id,
+            'date' => '2026-09-07',
+        ]))
+            ->assertOk()
+            ->assertSee('Fisioterapia avanzada - 60 min - $90.000 - $140.000')
+            ->assertSee('Precio:')
+            ->assertSee('$90.000 - $140.000');
+    }
+
     public function test_dashboard_shows_operational_ok_state_when_there_are_no_pending_actions(): void
     {
         [$user, $business] = $this->tenantUser();
